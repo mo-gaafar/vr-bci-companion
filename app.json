@@ -1,0 +1,16 @@
+{
+  "name": "Picnic Backend",
+  "description": "Backend server for picnic by illusionaire",
+  "repository": "https://github.com/mo-gaafar/picnic-backend",
+  "keywords": ["fastapi", "heroku"],
+  "image": "heroku/python",
+  "env": {
+    "PYTHONUNBUFFERED": "1",
+    "WEB_CONCURRENCY": "1"
+  },
+  "scripts": {
+    "postdeploy": "uvicorn main:app --port=5000"
+  },
+  "stack": "container"
+}
+
