@@ -1,3 +1,5 @@
+from auth.routes import auth
+from patient.routes import router as patient
 import os
 from fastapi import Request
 from fastapi import FastAPI, Header
@@ -22,22 +24,15 @@ tags_metadata = [
         "description": "Operations with users and authentication. The **login** logic is also here.",
     },
     {
-        "name": "units",
-        "description": "Operations related to units. Open to all users and none users."
-    },
-    {
-        "name": "customer",
-        "description": "Operations done by customer user."
-    },
-    {
-        "name": "owner",
-        "description": "Operations done by owner user. Includes operations like adding units, adding images, etc."
+        "name": "patient",
+        "description": "Operations with patients. This includes **CRUD** operations for patients and their exercise records.",
     },
     {
         "name": "admin",
         "description": "Operations done by admin user. This is a **superuser** who can do anything.",
     },
 ]
+
 
 app = FastAPI(docs_url=None, redoc_url=None, version=VERSION,
               description="<h2> This is the backend for a property rental application.</h2> <br> <br> The API is built using FastAPI and MongoDB, Hosted on Heroku. <br> API documentation is built automatically using Swagger and ReDoc. <br> <br> Built for Illusionaire", title="Picnic Backend API", favicon="static/favicon.ico", openapi_tags=tags_metadata)
@@ -53,8 +48,9 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
 # app.include_router(, prefix=root_prefix)
+app.include_router(patient, prefix=root_prefix, tags=["patient"])
+app.include_router(auth, prefix=root_prefix, tags=["auth"])
 
 
 @app.get(f"{root_prefix}/healthcheck")

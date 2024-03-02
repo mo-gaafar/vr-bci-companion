@@ -1,9 +1,9 @@
 
-from util.misc import id_to_str
-from models.users import UserInDB, UserOut, RoleEnum
-from config.config import SECRET_KEY, DEVELOPMENT, ADMIN_PASS
+from common.util.misc import id_to_str
+from auth.models import UserInDB, UserOut, RoleEnum
+from config import SECRET_KEY, DEVELOPMENT, ADMIN_PASS
 import bcrypt
-from models.users import UserInDB, UserOut, UserToken
+from auth.models import UserInDB, UserOut, UserToken
 import jwt
 from datetime import datetime, timedelta
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials

@@ -1,6 +1,6 @@
 from fastapi import Depends
 from pymongo import MongoClient
-from config.config import conf
+from config import conf
 import ssl
 
 

@@ -1,13 +1,18 @@
-from models.users import UserInDB, UserOut
-from models.common import PaginationIn, PaginatedList
+from auth.models import UserInDB, UserOut
+from models import PaginationIn, PaginatedList
 from pymongo import MongoClient
 from abc import ABC, abstractmethod
-from repo.base import BaseRepository
-from repo.db import MongoDB
-from util.misc import db_to_dict, obj_to_dict, id_to_str
-from util.security import hash_password
-from models.users import UserIn, UserOut
+# from repo import BaseRepository
+from database import MongoDB
+from common.util.misc import db_to_dict, obj_to_dict, id_to_str
+from common.util.security import hash_password
+from auth.models import UserIn, UserOut
 from bson import ObjectId
+
+
+def generate_otp(auth_user: UserOut) -> str:
+    # generate otp
+    return "123456"
 
 
 def update_password(auth_user: UserOut, new_password: str) -> None:
@@ -15,10 +20,12 @@ def update_password(auth_user: UserOut, new_password: str) -> None:
     MongoDB.authuser.update_one({"_id": ObjectId(auth_user.id)}, {
         "$set": {"encrypted_pass": hash_password(new_password)}})
 
+
 def get_auth_user_by_email(email: str) -> UserOut:
     # get user from db
     user = MongoDB.authuser.find_one({"email": email})
     return UserOut(**db_to_dict(user))
+
 
 def get_auth_user_by_username(username: str) -> UserOut:
     # get user from db

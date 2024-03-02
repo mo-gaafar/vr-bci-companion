@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field, validator, BeforeValidator
+from pydantic import BaseModel, Field, ValidationError
+from bson.objectid import ObjectId
+from pydantic import BaseModel, Field, validator
 from pydantic.fields import ModelField
 from pydantic.generics import GenericModel
 from bson import ObjectId
@@ -16,9 +18,20 @@ def short_uuid():
     return shortened_uuid
 
 
-# Represents an ObjectId field in the database.
-# It will be represented as a `str` on the model so that it can be serialized to JSON.
-PyObjectId = Annotated[str, BeforeValidator(str)]
+# # Represents an ObjectId field in the database.
+# # It will be represented as a `str` on the model so that it can be serialized to JSON.
+
+
+class PyObjectId(str):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, value):
+        if not ObjectId.is_valid(value):
+            raise ValidationError("Invalid ObjectId")
+        return str(value)  # Ensure it's returned as a string
 
 
 class ObjId(ObjectId):
@@ -83,6 +96,20 @@ class CommonModel(BaseModel):
     #         raise ValueError('Invalid carrier for Egyptian phone number')
 
     #     return phone
+
+
+class SuccessfulResponse(BaseModel):
+    message: str = "Success"
+
+
+class MongoBaseModel(BaseModel):
+    id: PyObjectId = Field(default_factory=ObjectId, alias="_id")
+
+    class Config:
+        allow_population_by_field_name = True
+        # Ensure ObjectId serialization in responses
+        json_encoders = {ObjectId: str}
+        arbitrary_types_allowed = True
 
 
 class DateRange(CommonModel):

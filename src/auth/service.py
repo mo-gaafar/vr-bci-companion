@@ -1,12 +1,12 @@
-from services.subscription import check_subscription_of_authuser
+# from services.subscription import check_subscription_of_authuser
 from bson import ObjectId
-from util.misc import db_to_dict
+from common.util.misc import db_to_dict
 from abc import ABC, abstractmethod
-from models.users import UserOut, UserInDB, UserIn
+from auth.models import UserOut, UserInDB, UserIn
 # from repo.auth_user import AuthUserRepository
-from repo.db import MongoDB
-from util.security import generate_tokens, get_iat_from_token, verify_hash_password, hash_password, verify_token
-from util.misc import id_to_str, obj_to_dict
+from database import MongoDB
+from common.util.security import generate_tokens, get_iat_from_token, verify_hash_password, hash_password, verify_token
+from common.util.misc import id_to_str, obj_to_dict
 from datetime import datetime
 
 REFRESH_TIME = 30  # days
@@ -35,7 +35,7 @@ def login(username: str, password: str) -> UserOut:
         MongoDB.authuser.update_one({"_id": ObjectId(user.id)}, {
             "$set": {"valid_date": datetime.utcnow()}})
 
-    check_subscription_of_authuser(UserOut(**obj_to_dict(user)))
+    # check_subscription_of_authuser(UserOut(**obj_to_dict(user)))
     # create token
     return generate_tokens(UserOut(**obj_to_dict(user)))
 
@@ -58,7 +58,7 @@ def refresh_token_svc(refresh_token: str) -> UserOut:
         print(user.valid_date)
         if get_iat_from_token(refresh_token) < user.valid_date:
             raise Exception("User session expired")
-    check_subscription_of_authuser(UserOut(**obj_to_dict(user)))
+    # check_subscription_of_authuser(UserOut(**obj_to_dict(user)))
     # create token
     return generate_tokens(UserOut(**user.dict()))
 

@@ -5,6 +5,13 @@ from typing import Optional, List
 from models import ObjId
 from enum import Enum
 
+from pydantic import BaseModel
+
+
+class GenerateOTPResponse(BaseModel):
+    otp: str
+    expiry: int
+
 
 class RoleEnum(str, Enum):
     admin = "admin"
