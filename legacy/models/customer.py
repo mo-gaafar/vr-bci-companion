@@ -1,27 +1,40 @@
-from pydantic import BaseModel, Field, EmailStr, validator
-from typing import Optional, List
-from models.common import CommonModel
+from models.common import CommonModel, PaginationIn, PaginationOut, Currency
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Path
+from pydantic import EmailStr, Field
+from typing import Optional
 
 
-class Customer(CommonModel):
+class CustomerForm(CommonModel):
+    first_name: str
+    last_name: str
+
+    email: Optional[EmailStr] = None
+    phone: str  # TODO validate phone number format
+    # password: str
+    # profile_pic: Optional[str] = None  # TODO validate url format
+    # booking_history: Optional[list[str]] = []
+    # wishlist: Optional[list[str]] = []
+
+
+class CustomerSignupSuccess(CommonModel):
+    customer_id: str
+    # auth_user_id: str
+
+
+class CustomerSinupIn(CustomerForm):
+    password: str
+
+
+class CustomerOutPublic(CommonModel):
     id: Optional[str] = Field(None, alias="_id")
-    name: str
+    first_name: str
+    last_name: str
     email: EmailStr
     phone: str
-    is_active: Optional[bool] = Field(True)
-    ticket_ids: Optional[List[str]] = Field(default_factory=list)
-    order_ids: Optional[List[str]] = Field(default_factory=list)
+    # profile_pic: Optional[str] = None
 
 
-class OrderCustomer(CommonModel):
+class CustomerInDB(CustomerForm):
     id: Optional[str] = Field(None, alias="_id")
-    name: str
-    email: Optional[EmailStr]
-    phone: Optional[str]
-
-    @validator('name')
-    def validate_two_words(cls, value):
-        words = value.split(" ")
-        if len(words) < 2:
-            raise ValueError('Two words are required, first and last name')
-        return value
+    # role: RoleEnum = RoleEnum.customer
+    auth_user_id: Optional[str] = None
