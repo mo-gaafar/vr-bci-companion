@@ -93,35 +93,8 @@ async def redoc_html():
 @app.get("/", response_class=HTMLResponse)
 async def root():
     '''Contains webpage with html content'''
-    html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <title>Picnic App Backend API</title>
-    <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css'> \
-    <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js'></script> \
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js'></script> \
-    <script src='https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js'></script>
-    </head>
-    <body>
-    <h1>Picnic App Backend API</h1>
-    <p> This is the backend API for a Picnic App Backend. </p>
-    <p> The API is built using <a href='https://fastapi.tiangolo.com/'>FastAPI</a> and \
-    <a href='https://www.mongodb.com/'>MongoDB</a>. </p>
-    <p> Hosted on <a href='https://www.heroku.com/'>Heroku</a>. </p>
-    <p> API documentation is built automatically using <a href='https://swagger.io/'>Swagger</a> 
-    and <a href='https://redoc.ly/'>ReDoc</a>. </p>
-    <p> Built for Illusionaire </p>
-
-    <div>
-    <h2>API Documentation</h2>
-    <ul>
-    <li><a href="/docs">Swagger UI</a></li>
-    <li><a href="/redoc">ReDoc</a></li>
-    </ul>
-    </div>
-    </body>
-    </html>"""
+    from gui.backend_home import html_content
+    html = html_content
     return html
 
 
@@ -139,4 +112,4 @@ async def root():
 if __name__ == '__main__':
 
     uvicorn.run(app, host=conf["SERVER_DOMAIN"],  # type: ignore
-                port=int(conf["PORT"]), log_level='info')
+                port=int(conf["SERVER_PORT"]), log_level='info')

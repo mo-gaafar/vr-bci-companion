@@ -1,9 +1,10 @@
+from typing import Optional
 from typing import Annotated
 from common.models import ObjectIdPydanticAnnotation
 from bson import ObjectId
 from pydantic import BaseModel, Field, validator
 from datetime import datetime
-from common.models import  MongoBaseModel
+from common.models import MongoBaseModel
 
 
 class Patient(MongoBaseModel):
@@ -45,7 +46,7 @@ class ExerciseRecord(MongoBaseModel):
 
 
 class PatientUpdate(BaseModel):
-    name: str | None = None
-    age: int | None = None
-    medical_history: str | None = None
-    rehabilitation_program: str | None = None
+    name: Optional[str] = None
+    age: Optional[int] = None
+    medical_history: Optional[str] = None
+    rehabilitation_program: Optional[str] = None

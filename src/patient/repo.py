@@ -3,6 +3,8 @@ from bson import ObjectId
 from typing import List
 from .models import Patient, ExerciseRecord, PatientUpdate
 
+from typing import Optional
+
 
 class PatientRepository:
     def __init__(self, db_client: pymongo.MongoClient):
@@ -15,7 +17,7 @@ class PatientRepository:
         patient.id = result.inserted_id
         return patient
 
-    async def get_patient(self, patient_id: str) -> Patient | None:
+    async def get_patient(self, patient_id: str) -> Optional[Patient]:
         patient_data = await self.patient_collection.find_one({"_id": ObjectId(patient_id)})
         if patient_data:
             return Patient(**patient_data)
@@ -26,7 +28,7 @@ class PatientRepository:
         patients = await cursor.to_list(length=None)  # Get all results
         return [Patient(**document) for document in patients]
 
-    async def update_patient(self, patient_id: str, update_data: PatientUpdate) -> Patient | None:
+    async def update_patient(self, patient_id: str, update_data: PatientUpdate) -> Optional[Patient]:
         update_dict = {k: v for k, v in update_data.dict().items()
                        if v is not None}
 
