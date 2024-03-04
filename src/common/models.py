@@ -1,15 +1,15 @@
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, Json
 from bson.objectid import ObjectId
 from pydantic import BaseModel, Field, validator
-from pydantic.fields import ModelField
-from pydantic.generics import GenericModel
 from bson import ObjectId
-from bson.errors import InvalidId
+# from bson.errors import InvalidId
 from datetime import datetime
-from typing import Optional, TypeVar, Generic, List
+from typing import Optional, TypeVar, Generic, List, Any, Annotated
 from enum import Enum
 import uuid
 from typing import Annotated
+from pydantic_core import core_schema
+from pydantic.json_schema import JsonSchemaValue
 
 
 def short_uuid():
@@ -22,29 +22,53 @@ def short_uuid():
 # # It will be represented as a `str` on the model so that it can be serialized to JSON.
 
 
-class PyObjectId(str):
+# class PyObjectId(str):
+#     @classmethod
+#     def __get_validators__(cls):
+#         yield cls.validate
+
+#     @classmethod
+#     def validate(cls, value):
+#         if not ObjectId.is_valid(value):
+#             raise ValidationError("Invalid ObjectId")
+#         return str(value)  # Ensure it's returned as a string
+
+
+class ObjectIdPydanticAnnotation:
     @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+    def validate_object_id(cls, v: Any, handler) -> ObjectId:
+        if isinstance(v, ObjectId):
+            return v
+
+        s = handler(v)
+        if ObjectId.is_valid(s):
+            return ObjectId(s)
+        else:
+            raise ValueError("Invalid ObjectId")
 
     @classmethod
-    def validate(cls, value):
-        if not ObjectId.is_valid(value):
-            raise ValidationError("Invalid ObjectId")
-        return str(value)  # Ensure it's returned as a string
-
-
-class ObjId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+    def __get_pydantic_core_schema__(cls, source_type, _handler) -> core_schema.CoreSchema:
+        assert source_type is ObjectId
+        return core_schema.no_info_wrap_validator_function(
+            cls.validate_object_id,
+            core_schema.str_schema(),
+            serialization=core_schema.to_string_ser_schema(),
+        )
 
     @classmethod
-    def validate(cls, v: str):
-        try:
-            return cls(v)
-        except InvalidId:
-            raise ValueError("Not a valid ObjectId")
+    def __get_pydantic_json_schema__(cls, _core_schema, handler) -> JsonSchemaValue:
+        return handler(core_schema.str_schema())
+# class ObjId(ObjectId):
+#     @classmethod
+#     def __get_validators__(cls):
+#         yield cls.validate
+
+#     @classmethod
+#     def validate(cls, v: str):
+#         try:
+#             return cls(v)
+#         except InvalidId:
+#             raise ValueError("Not a valid ObjectId")
 
 
 class RepeatType(str, Enum):
@@ -71,7 +95,7 @@ class Currency(str, Enum):
 #     id: Optional[ObjId] = Field(None, alias="_id")
 
 #     class Config:
-#         # allow_population_by_field_name = True
+#         # populate_by_name = True
 #         json_encoders = {ObjectId: str}
 
 
@@ -102,14 +126,18 @@ class SuccessfulResponse(BaseModel):
     message: str = "Success"
 
 
-class MongoBaseModel(BaseModel):
-    id: PyObjectId = Field(default_factory=ObjectId, alias="_id")
+class MongoBaseModel(CommonModel):
+    id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
 
-    class Config:
-        allow_population_by_field_name = True
-        # Ensure ObjectId serialization in responses
-        json_encoders = {ObjectId: str}
-        arbitrary_types_allowed = True
+    # @validator('id')
+    # def validate_object_id(cls, v):
+    #     if not ObjectId.is_valid(v):
+    #         raise ValueError('Invalid ObjectId')
+    #     return str(v)  # Ensure string output
+
+    # class Config:
+    #     json_encoders = {ObjectId: str}
+    #     arbitrary_types_allowed = True
 
 
 class DateRange(CommonModel):
@@ -140,7 +168,7 @@ class PaginationOut(BaseModel):
 T = TypeVar('T')
 
 
-class PaginatedList(GenericModel, Generic[T]):
+class PaginatedList(BaseModel, Generic[T]):
     pagination: PaginationOut
     data: List[T] = []
 

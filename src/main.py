@@ -38,6 +38,7 @@ app = FastAPI(docs_url=None, redoc_url=None, version=VERSION,
               description="<h2> This is the backend for a property rental application.</h2> <br> <br> The API is built using FastAPI and MongoDB, Hosted on Heroku. <br> API documentation is built automatically using Swagger and ReDoc. <br> <br> Built for Illusionaire", title="Picnic Backend API", favicon="static/favicon.ico", openapi_tags=tags_metadata)
 
 origins = ['*']
+app.openapi_version = "3.0.2"  # Or a different OpenAPI 3.0.x version
 
 app.add_middleware(
     CORSMiddleware,

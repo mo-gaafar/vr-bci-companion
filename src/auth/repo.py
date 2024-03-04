@@ -1,5 +1,5 @@
 from auth.models import UserInDB, UserOut
-from models import PaginationIn, PaginatedList
+from common.models import PaginationIn, PaginatedList
 from pymongo import MongoClient
 from abc import ABC, abstractmethod
 # from repo import BaseRepository

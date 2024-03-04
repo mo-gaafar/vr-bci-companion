@@ -1,7 +1,7 @@
 v: 0
 micros:
   - name: backend
-    src: /
+    src: src/
     path: api
     engine: python3.9
     run: uvicorn main:app
@@ -11,6 +11,7 @@ micros:
       - "*/event/*"
       - "*"
     presets:
+      # requirements: requirements.txt
       env:
         - name: "MONGO_URI"
           description: "MongoDB URI"

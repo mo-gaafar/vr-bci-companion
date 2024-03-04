@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import List
 
-from .models import Patient, ExerciseRecord, PatientUpdate
-from models import SuccessfulResponse
-from .repo import PatientRepository
+from patient.models import Patient, ExerciseRecord, PatientUpdate
+from common.models import SuccessfulResponse
+from patient.repo import PatientRepository
 
 router = APIRouter(prefix="/patient")
 

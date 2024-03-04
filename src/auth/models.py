@@ -1,8 +1,11 @@
+from bson import ObjectId
 from datetime import datetime
 from pydantic import BaseModel, Field, EmailStr, validator
-from models import CommonModel
-from typing import Optional, List
-from models import ObjId
+from common.models import CommonModel
+from typing import Optional, List, Annotated
+from common.models import ObjectIdPydanticAnnotation, MongoBaseModel
+# from common.models import PyObjectId as ObjId
+
 from enum import Enum
 
 from pydantic import BaseModel
@@ -19,7 +22,7 @@ class RoleEnum(str, Enum):
     guest = "guest"
 
 
-class BaseUser(CommonModel):
+class BaseUser(MongoBaseModel):
     # id: str = Field(..., alias="_id")
     username: str
     email: Optional[EmailStr] = None
@@ -41,14 +44,9 @@ class BaseUser(CommonModel):
 
 
 class UserInDB(BaseUser):
-    id: Optional[str] = Field(None, alias="_id")
+    id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
     encrypted_pass: str = Field("None")
     valid_date: Optional[datetime] = None  # logs out users before this date
-
-    class Config:
-        json_encoders = {
-            ObjId: lambda v: str(v),
-        }
 
 
 class UserOut(CommonModel):

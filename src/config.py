@@ -1,6 +1,6 @@
 from dotenv import dotenv_values
 # from dateutil import tz
-import pytz
+# import pytz
 
 DEVELOPMENT = False  # ! Change this to False when deploying
 VERSION = "v1"

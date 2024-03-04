@@ -1,9 +1,9 @@
+from typing import Annotated
+from common.models import ObjectIdPydanticAnnotation
 from bson import ObjectId
 from pydantic import BaseModel, Field, validator
 from datetime import datetime
-from models import PyObjectId
-
-from models import MongoBaseModel
+from common.models import  MongoBaseModel
 
 
 class Patient(MongoBaseModel):
@@ -13,7 +13,7 @@ class Patient(MongoBaseModel):
     rehabilitation_program: str
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "name": "Jane Doe",
                 "age": 35,
@@ -24,13 +24,13 @@ class Patient(MongoBaseModel):
 
 
 class ExerciseRecord(MongoBaseModel):
-    patient_id: PyObjectId
+    patient_id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
     exercise_name: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     performance_metrics: dict
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "patient_id": "63dd03cbef0772c28037964c",
                 "exercise_name": "Squats",
