@@ -1,3 +1,4 @@
+from fastapi import Body
 from common.util.misc import db_to_dict
 from auth.repo import get_auth_user_by_id, generate_otp
 from auth.service import login, refresh_token_svc, logout
@@ -17,7 +18,7 @@ auth = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @auth.get("/login/obtaintoken", response_model=UserToken)
-async def login_token(username: str, password: str):
+async def login_token(username: str = Body(...), password: str = Body(...)):
     try:
         return login(username, password)
     except Exception as e:

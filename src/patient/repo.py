@@ -1,7 +1,7 @@
 import pymongo
 from bson import ObjectId
 from typing import List
-from .models import Patient, ExerciseRecord, PatientUpdate
+from .models import PatientOut, ExerciseRecord, PatientUpdate, PatientInDB
 
 from typing import Optional
 
@@ -12,23 +12,23 @@ class PatientRepository:
         self.patient_collection = self.db.patients
         self.exercise_record_collection = self.db.exercise_records
 
-    async def create_patient(self, patient: Patient) -> Patient:
+    async def create_patient(self, patient: PatientInDB) -> PatientInDB:
         result = await self.patient_collection.insert_one(patient.dict())
         patient.id = result.inserted_id
         return patient
 
-    async def get_patient(self, patient_id: str) -> Optional[Patient]:
+    async def get_patient(self, patient_id: str) -> Optional[PatientInDB]:
         patient_data = await self.patient_collection.find_one({"_id": ObjectId(patient_id)})
         if patient_data:
-            return Patient(**patient_data)
+            return PatientInDB(**patient_data)
         return None
 
-    async def get_all_patients(self) -> List[Patient]:
+    async def get_all_patients(self) -> List[PatientInDB]:
         cursor = self.patient_collection.find()
         patients = await cursor.to_list(length=None)  # Get all results
-        return [Patient(**document) for document in patients]
+        return [PatientInDB(**document) for document in patients]
 
-    async def update_patient(self, patient_id: str, update_data: PatientUpdate) -> Optional[Patient]:
+    async def update_patient(self, patient_id: str, update_data: PatientUpdate) -> Optional[PatientInDB]:
         update_dict = {k: v for k, v in update_data.dict().items()
                        if v is not None}
 

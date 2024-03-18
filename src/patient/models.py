@@ -4,24 +4,40 @@ from common.models import ObjectIdPydanticAnnotation
 from bson import ObjectId
 from pydantic import BaseModel, Field, validator
 from datetime import datetime
-from common.models import MongoBaseModel
+from common.models import MongoBaseModel, ObjectIdPydanticAnnotation
 
 
-class Patient(MongoBaseModel):
-    name: str
-    age: int
+class PatientOut(MongoBaseModel):
+    first_name: str
+    last_name: str
+    date_of_birth: datetime
     medical_history: str
     rehabilitation_program: str
+    diagnosis: Optional[str] = None
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "name": "Jane Doe",
-                "age": 35,
-                "medical_history": "Previous ACL surgery",
-                "rehabilitation_program": "Post-operative Knee Recovery"
-            }
-        }
+    # class Config:
+    #     json_schema_extra = {
+    #         "example": {
+    #             "name": "Jane Doe",
+    #             "age": 35,
+    #             "medical_history": "Previous ACL surgery",
+    #             "rehabilitation_program": "Post-stroke rehabilitation program",
+    #             "diagnosis": "Hemi-paresis due to stroke"
+    #         }
+    #     }
+
+
+class PatientSignup(BaseModel):
+    username: str
+    password: str
+    email: str
+    phone_number: str
+    first_name: str
+    last_name: str
+    date_of_birth: datetime
+    medical_history: str
+    rehabilitation_program: str
+    diagnosis: Optional[str] = None
 
 
 class ExerciseRecord(MongoBaseModel):
@@ -50,3 +66,8 @@ class PatientUpdate(BaseModel):
     age: Optional[int] = None
     medical_history: Optional[str] = None
     rehabilitation_program: Optional[str] = None
+
+
+class PatientInDB(PatientOut):
+    auth_user_id: Optional[Annotated[ObjectId,
+                                     ObjectIdPydanticAnnotation]] = None
