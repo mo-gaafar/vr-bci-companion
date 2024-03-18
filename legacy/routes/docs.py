@@ -22,7 +22,7 @@ async def serve_markdown(file_name: str):
     <!DOCTYPE html>
     <html>
     <head>
-    <title>Picnic App Backend API</title>
+    <title>Rehab App Backend API</title>
     <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css'>
     </head>
     <body>
@@ -39,5 +39,3 @@ async def serve_markdown(file_name: str):
     html_content = html_content.replace(
         "</body>", '<div class="text-center"><a href="/"><button class="btn btn-primary">Back to Home</button></a></div></body>')
     return HTMLResponse(content=html_content)
-
-

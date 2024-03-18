@@ -5,19 +5,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Attach using Process Id",
-      "type": "python",
-      "request": "attach",
-      "processId": "${command:pickProcess}",
-      "justMyCode": true
-    },
-    {
-      "request": "launch",
+      "name": "Python Debugger: FastAPI",
       "type": "debugpy",
-      "name": "Python: Current File (Admin)", // Example name
-      "program": "${file}",
-      "console": "integratedTerminal",
-      "runAsAdministrator": true // Add this line
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--reload"],
+      "cwd": "${workspaceFolder}/src",
+      "jinja": true
     }
   ]
 }
