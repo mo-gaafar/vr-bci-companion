@@ -127,7 +127,7 @@ class SuccessfulResponse(BaseModel):
 
 
 class MongoBaseModel(CommonModel):
-    id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
+    id: Optional[Annotated[ObjectId, ObjectIdPydanticAnnotation]] = Field(None, alias="_id")
 
     # @validator('id')
     # def validate_object_id(cls, v):

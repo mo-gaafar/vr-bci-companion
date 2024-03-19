@@ -31,7 +31,7 @@ class PatientSignup(BaseModel):
     username: str
     password: str
     email: str
-    phone_number: str
+    phone: str
     first_name: str
     last_name: str
     date_of_birth: datetime
@@ -68,6 +68,12 @@ class PatientUpdate(BaseModel):
     rehabilitation_program: Optional[str] = None
 
 
-class PatientInDB(PatientOut):
+class PatientInDB(MongoBaseModel):
+    first_name: str
+    last_name: str
+    date_of_birth: datetime
+    medical_history: str
+    rehabilitation_program: str
+    diagnosis: Optional[str] = None
     auth_user_id: Optional[Annotated[ObjectId,
                                      ObjectIdPydanticAnnotation]] = None

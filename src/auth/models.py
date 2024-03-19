@@ -20,6 +20,9 @@ class RoleEnum(str, Enum):
     admin = "admin"
     owner = "owner"
     guest = "guest"
+    patient = "patient"
+    doctor = "doctor"
+    nurse = "nurse"
 
 
 class BaseUser(MongoBaseModel):
@@ -44,7 +47,7 @@ class BaseUser(MongoBaseModel):
 
 
 class UserInDB(BaseUser):
-    id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
+    # id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
     encrypted_pass: str = Field("None")
     valid_date: Optional[datetime] = None  # logs out users before this date
 

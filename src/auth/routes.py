@@ -17,7 +17,7 @@ auth = APIRouter(prefix="/auth", tags=["auth"])
 # TODO: POST /login/refreshtoken - obtain token from refresh token and also renew refresh token
 
 
-@auth.get("/login/obtaintoken", response_model=UserToken)
+@auth.post("/login/obtaintoken", response_model=UserToken)
 async def login_token(username: str = Body(...), password: str = Body(...)):
     try:
         return login(username, password)
@@ -27,7 +27,7 @@ async def login_token(username: str = Body(...), password: str = Body(...)):
         raise HTTPException(400, str(e))
 
 
-@auth.get("/login/refreshtoken", response_model=UserToken)
+@auth.post("/login/refreshtoken", response_model=UserToken)
 async def refresh_token(refresh_token: Optional[str] = None, token: Optional[UserToken] = Depends(get_token_header)):
     '''Obtain token from refresh token or HTTPBearer and also renew refresh token'''
     if refresh_token is None:
@@ -46,7 +46,7 @@ async def refresh_token(refresh_token: Optional[str] = None, token: Optional[Use
         raise HTTPException(400, str(e))
 
 
-@auth.patch("/logout", tags=["backend_admin"])
+@auth.delete("/logout", tags=["backend_admin"])
 async def logout_user(auth_user: UserOut = Depends(verify_token_header)):
     try:
         logout(auth_user)
