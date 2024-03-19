@@ -1,11 +1,19 @@
 # from services.subscription import check_subscription_of_authuser
+from typing import Optional
+from fastapi import HTTPException, Depends
+from auth.models import RoleEnum
+from config import DEVELOPMENT
+from common.util.security import verify_token
+from auth.models import UserOut
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from auth.repo import get_user_by_token
 from bson import ObjectId
 from common.util.misc import db_to_dict
 from abc import ABC, abstractmethod
 from auth.models import UserOut, UserInDB, UserIn
 # from repo.auth_user import AuthUserRepository
 from database import MongoDB
-from common.util.security import generate_tokens, get_iat_from_token, verify_hash_password, hash_password, verify_token
+from common.util.security import generate_tokens, get_iat_from_token, verify_hash_password, hash_password, verify_token, optional_security, security
 from common.util.misc import id_to_str, obj_to_dict
 from datetime import datetime
 
@@ -44,7 +52,9 @@ def refresh_token_svc(refresh_token: str) -> UserOut:
     if refresh_token is None:
         raise Exception("Refresh token not provided")
     # get user from refresh token
-    user = verify_token(refresh_token)
+    # get valid_date from db
+    user = get_user_by_token(refresh_token)
+    user = verify_token(refresh_token, user)
     # look up user in db
     print(user)
     user = db_to_dict(MongoDB.authuser.find_one({"_id": ObjectId(user.id)}))
@@ -69,6 +79,31 @@ def logout(auth_user: UserOut) -> None:
         "$set": {"valid_date": datetime.utcnow()}})
 
 
+def verify_token_header(authorization: HTTPAuthorizationCredentials = Depends(security)) -> UserOut:
+    if DEVELOPMENT:
+        return UserOut(**{
+            "username": "admin",
+            "role": RoleEnum.admin,
+            "tenant_id": "test",
+            "first_name": "Admin",
+            "last_name": "Admin",
+            "email": "admin@admin.com"})
+    try:
+        # check scheme is bearer
+        if authorization.scheme.lower() != "bearer":
+            raise Exception("Invalid token")
+        # check token is valid
+        user = get_user_by_token(authorization.credentials)
+        return verify_token(authorization.credentials, user)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+def optional_token_header(authorization: HTTPAuthorizationCredentials = Depends(optional_security)) -> Optional[UserOut]:
+    try:
+        return verify_token_header(authorization)
+    except Exception as e:
+        return None
 # class BaseAuth(ABC):
 #     @abstractmethod
 #     def login(self, username: str, password: str) -> str:

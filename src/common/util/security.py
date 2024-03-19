@@ -29,11 +29,6 @@ def access_check(user: UserOut, allowed_roles: list[RoleEnum], raise_exception: 
     return allowed
 
 
-def optional_token_header(authorization: HTTPAuthorizationCredentials = Depends(optional_security)) -> Optional[UserOut]:
-    try:
-        return verify_token_header(authorization)
-    except Exception as e:
-        return None
 
 
 def get_token_header(authorization: Optional[HTTPAuthorizationCredentials] = Depends(optional_security)) -> Optional[UserToken]:
@@ -46,23 +41,6 @@ def get_token_header(authorization: Optional[HTTPAuthorizationCredentials] = Dep
         return UserToken(auth_token=authorization.credentials, refresh_token=None)
 
 
-def verify_token_header(authorization: HTTPAuthorizationCredentials = Depends(security)) -> UserOut:
-    if DEVELOPMENT:
-        return UserOut(**{
-            "username": "admin",
-            "role": RoleEnum.admin,
-            "tenant_id": "illusionaire",
-            "first_name": "Admin",
-            "last_name": "Admin",
-            "email": "admin@admin.com"})
-    try:
-        # check scheme is bearer
-        if authorization.scheme.lower() != "bearer":
-            raise Exception("Invalid token")
-        # check token is valid
-        return verify_token(authorization.credentials)
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
 
 
 def get_iat_from_token(token: str) -> datetime:
@@ -75,16 +53,10 @@ def get_iat_from_token(token: str) -> datetime:
     return iat
 
 
-def verify_token(token: str) -> UserOut:
+def verify_token(token: str, user: UserInDB) -> UserOut:
     try:
         token_user = get_user_from_token(token)
-        # get valid_date from db
-        # FIXME this needs to be refactored
-        from repo.db import MongoDB
-        from bson import ObjectId
-        from util.misc import db_to_dict
-        user = MongoDB.authuser.find_one({"_id": ObjectId(token_user.id)})
-        user = UserInDB(**db_to_dict(user))
+
         if user.valid_date is not None:
             # check token is not expired
             print(get_iat_from_token(token))

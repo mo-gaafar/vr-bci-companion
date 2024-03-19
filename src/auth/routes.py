@@ -1,11 +1,10 @@
 from fastapi import Body
 from common.util.misc import db_to_dict
 from auth.repo import get_auth_user_by_id, generate_otp
-from auth.service import login, refresh_token_svc, logout
+from auth.service import login, refresh_token_svc, logout, verify_token_header
 from typing import Optional
 from database import MongoDB
 from datetime import datetime
-from common.util.security import verify_token_header, optional_token_header
 from bson.objectid import ObjectId
 from fastapi import APIRouter, Header, HTTPException, Form, UploadFile, File, Depends, Query
 from auth.models import UserToken, BaseUser, UserInDB, UserOut, GenerateOTPResponse

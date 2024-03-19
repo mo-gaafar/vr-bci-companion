@@ -40,6 +40,14 @@ def get_auth_user_by_id(user_id: str) -> UserOut:
     return UserOut(**user.dict())
 
 
+def get_user_by_token(token: str) -> UserInDB:
+    # get user from db
+    from common.util.security import get_user_from_token
+    token = get_user_from_token(token)
+    user = MongoDB.authuser.find_one({"_id": ObjectId(token.id)})
+    return UserInDB(**db_to_dict(user))
+
+
 def create_auth_user(user: UserIn):
     # check if user exists
     if MongoDB.authuser.find_one({"username": user.username}) is not None:

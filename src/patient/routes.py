@@ -1,3 +1,4 @@
+from common.util.security import access_check
 from bson import ObjectId
 
 import pymongo
@@ -6,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import List
 
+from auth.service import verify_token_header
 from patient.models import PatientInDB, ExerciseRecord, PatientUpdate
 from common.models import SuccessfulResponse
 from patient.repo import PatientRepository
@@ -18,8 +20,6 @@ router = APIRouter(prefix="/patient")
 def get_patient_repo():
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     yield PatientRepository(client)
-
-# ... Rest of your routes ... (See previous examples for the full structure)
 
 
 @router.post("/signup", response_model=PatientOut, status_code=status.HTTP_201_CREATED)
@@ -35,7 +35,7 @@ async def signup(patient: PatientSignup, repo: PatientRepository = Depends(get_p
 
 
 @router.get("/{patient_id}", response_model=PatientOut)
-async def get_patient(patient_id: str, repo: PatientRepository = Depends(get_patient_repo)):
+async def get_patient(patient_id: str, repo: PatientRepository = Depends(get_patient_repo), auth_user=Depends(verify_token_header)):
     patient = await repo.get_patient(patient_id)
     if not patient:
         raise HTTPException(
@@ -44,14 +44,16 @@ async def get_patient(patient_id: str, repo: PatientRepository = Depends(get_pat
 
 
 @router.get("/", response_model=List[PatientOut])
-async def get_all_patients(repo: PatientRepository = Depends(get_patient_repo)):
+async def get_all_patients(repo: PatientRepository = Depends(get_patient_repo), auth_user=Depends(verify_token_header)):
+    access_check(auth_user, ["admin", "doctor"])
     return await repo.get_all_patients()
 
 
 @router.put("/{patient_id}", response_model=PatientOut)
 async def update_patient(
-    patient_id: str, update_data: PatientUpdate, repo: PatientRepository = Depends(get_patient_repo)
+    patient_id: str, update_data: PatientUpdate, repo: PatientRepository = Depends(get_patient_repo), auth_user=Depends(verify_token_header)
 ):
+    access_check(auth_user, ["admin", "doctor", "patient"])
     updated_patient = await repo.update_patient(patient_id, update_data)
     if not updated_patient:
         raise HTTPException(
