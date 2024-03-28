@@ -127,7 +127,8 @@ class SuccessfulResponse(BaseModel):
 
 
 class MongoBaseModel(CommonModel):
-    id: Optional[Annotated[ObjectId, ObjectIdPydanticAnnotation]] = Field(None, alias="_id")
+    id: Optional[Annotated[ObjectId, ObjectIdPydanticAnnotation]
+                 ] = Field(None, alias="_id")
 
     # @validator('id')
     # def validate_object_id(cls, v):
@@ -171,6 +172,11 @@ T = TypeVar('T')
 class PaginatedList(BaseModel, Generic[T]):
     pagination: PaginationOut
     data: List[T] = []
+
+
+class BaseResponse(BaseModel, Generic[T]):
+    data: T
+    detail: str = "Success"
 
 
 class SortOrder(str, Enum):

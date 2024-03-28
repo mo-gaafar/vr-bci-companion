@@ -1,6 +1,7 @@
+from common.models import BaseResponse
 from fastapi import Body
 from common.util.misc import db_to_dict
-from auth.repo import get_auth_user_by_id, generate_otp
+from auth.repo import get_auth_user_by_id
 from auth.service import login, refresh_token_svc, logout, verify_token_header
 from typing import Optional
 from database import MongoDB
@@ -54,12 +55,14 @@ async def logout_user(auth_user: UserOut = Depends(verify_token_header)):
         raise HTTPException(400, str(e))
 
 
-@auth.post("/headset/generateotp", response_model=GenerateOTPResponse)
+@auth.get("/headset/generateotp", response_model=GenerateOTPResponse)
 async def generate_otp_for_headset(
-    headset_id: str,
-    auth_user: UserOut = Depends(verify_token_header)
+    headset_id: str
 ):
-    """Generates a One-Time Password (OTP) for a given headset and associates it with the logged-in user.
+    """Generates a One-Time Password (OTP) for a given headset.
+    Note: To get the headset id (serial) in unity use: \n
+        AndroidJavaObject jo = new AndroidJavaObject("android.os.Build"); \n
+        string deviceID = jo.GetStatic<string>("SERIAL"); \n
 
     Args:
         headset_id (str): The unique ID of the headset.
@@ -71,50 +74,43 @@ async def generate_otp_for_headset(
     Raises:
         HTTPException: (401 Unauthorized) If the user is not authenticated.
     """
-    user = get_auth_user_by_id(auth_user.id)  # Get user data
-    otp_code = generate_otp(user, headset_id)
-    return {"otp": otp_code, "expiry": 5}  # Return OTP and expiry in minutes
+    # 1. Check if this headset is already paired with a user
+    # 2. Generate OTP and store it in the database
+    # 3. Return the OTP and its expiry time
+
+    return GenerateOTPResponse(otp=otp_code, expiry=5)
+
+# a route to enter the otp on the website
 
 
-@auth.get("/headset/checkotp")
-async def check_headset_otp(headset_id: str):
-    # Retrieve the OTP associated with the headset ID
-    user = MongoDB.authuser.find_one({"headset_id": headset_id})
-    if not user:
-        return {"message": "No OTP found"}
+@auth.post("/enterotp", response_model=BaseResponse[str])
+async def enter_otp_for_headset(
+        otp: str= Body("OTP"), auth_user: UserOut = Depends(verify_token_header)):
+    """Enters the One-Time Password (OTP) for a given headset.
 
-    user = UserInDB(**db_to_dict(user))
+    Args:
+        otp (str): The OTP to enter.
 
-    # Check if OTP has expired
-    if user.otp_expires_at < datetime.utcnow():
-        return {"message": "OTP expired"}
+    Returns:
+        BaseResponse[str]: A response model containing the status of the operation.
 
-    # Clear OTP from database (security best practice)
-    MongoDB.authuser.update_one({"_id": ObjectId(user.id)}, {"$unset": {
-        "otp_code": "",
-        "otp_generated_at": "",
-        "otp_expires_at": "",
-        "headset_id": ""
-    }})
+    Raises:
+        HTTPException: (401 Unauthorized) If the user is not authenticated.
+    """
+    # 1. Check if this headset is already paired with a user
+    # 2. Check if the OTP is valid
+    # 3. Pair the headset with the user
+    # 4. Return the status of the operation
 
-    return {"otp": user.otp_code}
+    return BaseResponse(data="Headset paired successfully")
 
 
-@auth.post("/headset/login")
-def headset_login(otp_code: str, headset_id: str, username: str, password: str):
-    # Find user by username and password
-    user = MongoDB.authuser.find_one({"username": username})
-    if user is None:
-        raise HTTPException(
-            status_code=401, detail="Invalid username or password")
-    user = UserInDB(**db_to_dict(user))
-
-    # Validate OTP and if it belongs to the headset
-    if user.otp_code != otp_code or user.headset_id != headset_id:
-        raise HTTPException(
-            status_code=401, detail="Invalid OTP or headset ID")
-
-    # Additional checks ...
-
-    # Clear OTP fields, generate tokens, and return them
-    # ...
+@auth.post("/headset/login/obtaintoken", response_model=UserToken)
+async def headset_obtain_token(headset_id: str, otp: str):
+    """ Obtain token for the headset to use for authentication.
+    Note that this can be done only once for a given OTP.
+    You should use the usual refresh token endpoint to renew the token."""
+    # find user by headset_id
+    # validate otp
+    # generate token
+    pass

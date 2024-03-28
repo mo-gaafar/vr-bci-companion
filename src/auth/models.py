@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 class GenerateOTPResponse(BaseModel):
     otp: str
+    pairing_id: str
     expiry: int
 
 
@@ -73,3 +74,12 @@ class AdminInDB(CommonModel):
     audit_logs: List[dict] = []
     login_history: List[dict] = []
     date_created: datetime = Field(datetime.utcnow())
+
+
+class PairingCodeRecord(CommonModel):
+    id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
+    user_id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
+    device_id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
+    code: str
+    generation_timestamp: datetime
+    expiration_timestamp: datetime

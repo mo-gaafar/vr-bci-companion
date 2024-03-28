@@ -104,6 +104,13 @@ def optional_token_header(authorization: HTTPAuthorizationCredentials = Depends(
         return verify_token_header(authorization)
     except Exception as e:
         return None
+
+
+def start_pairing_session(auth_user: UserOut) -> str:
+    # 1. Generate 
+
+    return "123456"
+
 # class BaseAuth(ABC):
 #     @abstractmethod
 #     def login(self, username: str, password: str) -> str:

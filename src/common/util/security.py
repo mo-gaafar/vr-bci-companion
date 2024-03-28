@@ -1,4 +1,8 @@
 
+from secrets import token_hex  # For stronger randomness
+import hashlib
+import random
+import time
 from common.util.misc import id_to_str
 from auth.models import UserInDB, UserOut, RoleEnum
 from config import SECRET_KEY, DEVELOPMENT, ADMIN_PASS
@@ -29,8 +33,6 @@ def access_check(user: UserOut, allowed_roles: list[RoleEnum], raise_exception: 
     return allowed
 
 
-
-
 def get_token_header(authorization: Optional[HTTPAuthorizationCredentials] = Depends(optional_security)) -> Optional[UserToken]:
     if authorization is None:
         return None
@@ -39,8 +41,6 @@ def get_token_header(authorization: Optional[HTTPAuthorizationCredentials] = Dep
         return None
     else:
         return UserToken(auth_token=authorization.credentials, refresh_token=None)
-
-
 
 
 def get_iat_from_token(token: str) -> datetime:
@@ -160,3 +160,51 @@ def generate_token_from_refresh(refresh_token) -> UserToken:
     user_token = UserToken(
         auth_token=access_token[0], refresh_token=refresh_token)
     return user_token
+
+
+
+# --- CODE GENERATION ---
+
+
+def generate_pairing_code(generation_timestamp: datetime, device_id: str):
+    # Configuration (adjust as needed)
+    code_length = 8
+    random_digits = 5
+    time_component_digits = 2
+    checksum_digits = 1
+
+    # 1. Strong Random Base
+    random_part = token_hex(random_digits)
+
+    # 2. Epoch Time Component
+    current_epoch = int(generation_timestamp.timestamp())
+    time_component = str(current_epoch % 10**time_component_digits)
+
+    # 3. Incorporate Device ID
+    device_id_str = str(device_id)
+    pre_checksum = random_part + time_component + device_id_str
+
+    # 4. Simple Checksum
+    checksum = str(sum(map(int, pre_checksum)))[-checksum_digits:]
+
+    # 5. Assemble the Code
+    code = random_part + time_component + checksum
+    return code
+
+# --- VERIFICATION ---
+
+
+def verify_code(generation_timestamp:str, device_id:str, code: str) -> bool:
+
+    # 2. Check Validity Window
+    time_difference = int(time.time()) - \
+        generation_timestamp.timestamp()
+    if time_difference > 300:  # 5 minute validity
+        return False
+
+    # 3. Regenerate Expected Code
+    expected_code = generate_pairing_code(
+        generation_timestamp, device_id)
+
+    # 4. Compare
+    return code == expected_code

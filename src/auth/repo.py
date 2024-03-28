@@ -1,3 +1,4 @@
+from .models import PairingCodeRecord
 from auth.models import UserInDB, UserOut
 from common.models import PaginationIn, PaginatedList
 from pymongo import MongoClient
@@ -9,10 +10,6 @@ from common.util.security import hash_password
 from auth.models import UserIn, UserOut
 from bson import ObjectId
 
-
-def generate_otp(auth_user: UserOut) -> str:
-    # generate otp
-    return "123456"
 
 
 def update_password(auth_user: UserOut, new_password: str) -> None:
@@ -66,6 +63,33 @@ def create_auth_user(user: UserIn):
     user = MongoDB.authuser.find_one({"_id": id})
 
     return UserOut(**db_to_dict(user))
+
+
+def create_pairing_code(user_id: str, device_id: str, code: str) -> PairingCodeRecord:
+    # check if pairing code for user or device exists and delete it
+    record = MongoDB.pairingcodes.find_one({"user_id": user_id})
+    if record is not None:
+        MongoDB.pairingcodes.delete_one({"_id": record["_id"]})
+    # check if there are duplicate pairing codes 
+    # TODO: idk what to do then
+    
+
+    # add pairing code to db
+    record = PairingCodeRecord(user_id=user_id, device_id=device_id, code=code)
+    id = MongoDB.pairingcodes.insert_one(record.dict()).inserted_id
+    # record = MongoDB.pairingcodes.find_one({"_id": id})
+    return PairingCodeRecord(**record.model_dump())
+
+
+def get_pairing_code(code: str) -> PairingCodeRecord:
+    # get pairing code from db
+    record = MongoDB.pairingcodes.find_one({"code": code})
+    return PairingCodeRecord(**db_to_dict(record))
+
+
+def pair_user_to_device(user_id: str, device_id: str) -> None:
+    # add user_id to pairing code
+    pass
 
 # class AuthUserRepository(BaseRepository[UserInDB, UserOut], ABC):
 #     @abstractmethod
