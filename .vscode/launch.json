@@ -10,6 +10,15 @@
       "request": "launch",
       "program": "local_ui.py",
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Python Debugger: FastAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--reload"],
+      "cwd": "${workspaceFolder}/src",
+      "jinja": true
     }
   ]
 }

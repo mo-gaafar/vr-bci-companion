@@ -1,6 +1,9 @@
 
 
+import os
 import subprocess
+
+from gui.server_thread import open_server_log_popup
 
 
 def init_connectors(self):
@@ -12,6 +15,8 @@ def init_connectors(self):
         lambda: lsl_lock_in_toggle(self))
 
     self.pushButton_start_backend.clicked.connect(lambda: toggle_server(self))
+    self.pushButton_backend_logs.clicked.connect(
+        lambda: open_server_log_popup(self))
 
 
 def get_LSL_config(self):
@@ -76,12 +81,18 @@ def toggle_server(self):
 
 def start_server(self):
     if self.server_process is None:
-        # Start the FastAPI server as a subprocess
-        self.server_process = subprocess.Popen(
-            ['uvicorn', 'src.main.app:app'])
+        # # Start the FastAPI server as a subprocess
+        # # Change directory to the 'src' folder
+        # os.chdir("src")
+        # # Start the FastAPI server as a subprocess
+        # self.server_process = subprocess.Popen(
+        #     ["../.venv/bin/python", "-m", "uvicorn", "main:app"],
+        # )
+        from gui.server_thread import init_server_process
+        self.server_process = init_server_process(self)
+        self.server_thread.output_received.connect(self.append_output)
+        self.server_thread.start()
         self.pushButton_start_backend.setText("Stop Server")
-        # read process print output
-        # print(self.server_process.stdout.read())
 
         # set status bar text
         self.statusbar.showMessage(

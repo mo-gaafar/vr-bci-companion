@@ -1,6 +1,5 @@
 from auth.routes import auth
 from patient.routes import router as patient
-import os
 from fastapi import Request
 from fastapi import FastAPI, Header
 from fastapi.responses import HTMLResponse, RedirectResponse
