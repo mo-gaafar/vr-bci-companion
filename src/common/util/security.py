@@ -29,7 +29,8 @@ def access_check(user: UserOut, allowed_roles: list[RoleEnum], raise_exception: 
         allowed = False
     if not allowed:
         if raise_exception:
-            raise HTTPException(status_code=403, detail="Access denied")
+            raise HTTPException(
+                status_code=403, detail="Access denied, you only have " + user.role + " access")
     return allowed
 
 
@@ -162,19 +163,25 @@ def generate_token_from_refresh(refresh_token) -> UserToken:
     return user_token
 
 
+# --- PAIRING CODE GENERATION ---
 
-# --- CODE GENERATION ---
+def safe_int(char):
+    if '0' <= char <= '9':
+        return int(char)
+    else:
+        return 0  # Or handle the non-numeric character as you see fit
 
 
 def generate_pairing_code(generation_timestamp: datetime, device_id: str):
     # Configuration (adjust as needed)
     code_length = 8
     random_digits = 5
+    seed = 593982
     time_component_digits = 2
     checksum_digits = 1
 
     # 1. Strong Random Base
-    random_part = token_hex(random_digits)
+    random_part = token_hex(seed)[-random_digits:]
 
     # 2. Epoch Time Component
     current_epoch = int(generation_timestamp.timestamp())
@@ -185,21 +192,20 @@ def generate_pairing_code(generation_timestamp: datetime, device_id: str):
     pre_checksum = random_part + time_component + device_id_str
 
     # 4. Simple Checksum
-    checksum = str(sum(map(int, pre_checksum)))[-checksum_digits:]
-
+    checksum = str(sum(map(safe_int, pre_checksum)))[-checksum_digits:]
     # 5. Assemble the Code
     code = random_part + time_component + checksum
     return code
 
-# --- VERIFICATION ---
+# --- PAIRING CODE VERIFICATION ---
 
 
-def verify_code(generation_timestamp:str, device_id:str, code: str) -> bool:
+def verify_code(generation_timestamp: str, device_id: str, code: str) -> bool:
 
     # 2. Check Validity Window
     time_difference = int(time.time()) - \
         generation_timestamp.timestamp()
-    if time_difference > 300:  # 5 minute validity
+    if time_difference > 300:  # 5 minute validity TODO: fix this
         return False
 
     # 3. Regenerate Expected Code

@@ -1,3 +1,5 @@
+from pymongo import cursor
+from pymongo.results import UpdateResult
 from typing import Optional
 
 
@@ -17,6 +19,7 @@ def db_to_dict(db_obj: Optional[dict]) -> dict:
     else:
         raise Exception("Object not found")
 
+
 def obj_to_dict(obj) -> dict:
     """Converts db object to dict."""
     if obj is not None:
@@ -26,3 +29,14 @@ def obj_to_dict(obj) -> dict:
         return dict
     else:
         raise Exception("Object not found")
+
+
+def check_empty(obj) -> bool:
+    """Check if pymongo cursor is empty."""
+    if obj is None:
+        return True
+    if type(obj) is cursor.Cursor:
+        return obj.retrieved == 0
+    if type(obj) is UpdateResult:
+        return obj.modified_count == 0
+    return False

@@ -1,4 +1,5 @@
 # from services.subscription import check_subscription_of_authuser
+from auth.repo import validate_pairing, fetch_user_by_device_id
 from typing import Optional
 from fastapi import HTTPException, Depends
 from auth.models import RoleEnum
@@ -107,9 +108,18 @@ def optional_token_header(authorization: HTTPAuthorizationCredentials = Depends(
 
 
 def start_pairing_session(auth_user: UserOut) -> str:
-    # 1. Generate 
+    # 1. Generate
 
     return "123456"
+
+
+def get_user_from_pairing(device_id: str, otp: str) -> UserOut:
+    """Gets the user from a valid pairing code."""
+    pairing = validate_pairing(
+        device_id=device_id, otp=otp, check_duplicate=False)
+    from common.util.security import verify_code
+    verify_code(pairing.generation_timestamp, pairing.device_id, pairing.code)
+    return fetch_user_by_device_id(device_id)
 
 # class BaseAuth(ABC):
 #     @abstractmethod

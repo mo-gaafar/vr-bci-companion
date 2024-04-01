@@ -1,3 +1,5 @@
+from typing import Optional
+from common.util.misc import check_empty
 from .models import PairingCodeRecord
 from auth.models import UserInDB, UserOut
 from common.models import PaginationIn, PaginatedList
@@ -9,7 +11,7 @@ from common.util.misc import db_to_dict, obj_to_dict, id_to_str
 from common.util.security import hash_password
 from auth.models import UserIn, UserOut
 from bson import ObjectId
-
+from datetime import datetime, timedelta, timezone
 
 
 def update_password(auth_user: UserOut, new_password: str) -> None:
@@ -65,20 +67,22 @@ def create_auth_user(user: UserIn):
     return UserOut(**db_to_dict(user))
 
 
-def create_pairing_code(user_id: str, device_id: str, code: str) -> PairingCodeRecord:
+def create_pairing_code(user_id: str, device_id: str, code: str, generation_time, expiration) -> PairingCodeRecord:
     # check if pairing code for user or device exists and delete it
     record = MongoDB.pairingcodes.find_one({"user_id": user_id})
     if record is not None:
         MongoDB.pairingcodes.delete_one({"_id": record["_id"]})
-    # check if there are duplicate pairing codes 
-    # TODO: idk what to do then
-    
+        #  check if there are duplicate pairing codes
+        record = MongoDB.pairingcodes.find({"code:": record["code"]})
+        if check_empty(record) is False:
+            raise Exception("Duplicated pairing code, regenerate code")
 
-    # add pairing code to db
-    record = PairingCodeRecord(user_id=user_id, device_id=device_id, code=code)
-    id = MongoDB.pairingcodes.insert_one(record.dict()).inserted_id
-    # record = MongoDB.pairingcodes.find_one({"_id": id})
-    return PairingCodeRecord(**record.model_dump())
+    record = PairingCodeRecord(
+        user_id=user_id, device_id=device_id, code=code,
+        generation_timestamp=generation_time, expiration_timestamp=expiration)
+    id = MongoDB.pairingcodes.insert_one(record.model_dump()).inserted_id
+    record = MongoDB.pairingcodes.find_one({"_id": id})
+    return PairingCodeRecord(**record)
 
 
 def get_pairing_code(code: str) -> PairingCodeRecord:
@@ -89,7 +93,60 @@ def get_pairing_code(code: str) -> PairingCodeRecord:
 
 def pair_user_to_device(user_id: str, device_id: str) -> None:
     # add user_id to pairing code
-    pass
+    result = MongoDB.pairingcodes.update_one({"device_id": device_id}, {
+        "$set": {"user_id": user_id}})
+    if result.matched_count == 0:
+        raise Exception("Pairing code not found")
+    # add device_id to user
+    MongoDB.authuser.update_one({"_id": ObjectId(user_id)}, {
+        "$set": {"device_id": device_id}})
+
+    # ? do i need to delete the pairing code after pairing? hmm
+
+
+def check_if_headset_paired(device_id: str) -> ObjectId:
+    '''Check if device_id is paired to a user_id and return user_id'''
+    # check if device_id is paired
+    record = MongoDB.pairingcodes.find_one({"device_id": device_id})
+    return record["user_id"]
+
+
+def fetch_user_by_device_id(device_id: str) -> UserOut:
+    """Fetches the user associated with a given device ID."""
+    user = MongoDB.authuser.find_one({"device_id": device_id})
+    if user is None:  # Handle the case where no user is found
+        raise Exception("No user found for device ID")
+    return UserOut(**db_to_dict(user))
+
+# FIXME i think this belongs in service?
+
+
+def validate_pairing(otp: str, device_id: Optional[str] = None, check_duplicate = True) -> PairingCodeRecord:
+    """Validates if a device is paired and the pairing code is not expired."""
+
+    record = MongoDB.pairingcodes.find_one(
+        {"code": otp})
+
+    if check_empty(record):
+        raise Exception("Device is not paired")
+    if device_id is not None:  # checks device id if given
+        record["device_id"] == device_id
+    if record["user_id"] is not None:
+        if check_duplicate:
+            raise Exception("Device is already paired")
+
+    if record["expiration_timestamp"].replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise Exception("Pairing code is expired")
+
+    return PairingCodeRecord(**record)
+
+
+def get_all_users(page: PaginationIn) -> PaginatedList[UserOut]:
+    # get all users from db
+    users = MongoDB.authuser.find().skip(
+        page.skip).limit(page.limit)
+    return PaginatedList(data=[UserOut(**db_to_dict(user)) for user in users], total=users.count())
+
 
 # class AuthUserRepository(BaseRepository[UserInDB, UserOut], ABC):
 #     @abstractmethod

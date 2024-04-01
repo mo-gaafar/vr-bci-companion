@@ -5,7 +5,7 @@ from auth.repo import get_auth_user_by_id
 from auth.service import login, refresh_token_svc, logout, verify_token_header
 from typing import Optional
 from database import MongoDB
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from bson.objectid import ObjectId
 from fastapi import APIRouter, Header, HTTPException, Form, UploadFile, File, Depends, Query
 from auth.models import UserToken, BaseUser, UserInDB, UserOut, GenerateOTPResponse
@@ -74,35 +74,52 @@ async def generate_otp_for_headset(
     Raises:
         HTTPException: (401 Unauthorized) If the user is not authenticated.
     """
-    # 1. Check if this headset is already paired with a user
-    # 2. Generate OTP and store it in the database
-    # 3. Return the OTP and its expiry time
 
-    return GenerateOTPResponse(otp=otp_code, expiry=5)
+    # 1. Generate OTP
+    from common.util.security import generate_pairing_code
+    generation_time = datetime.now(timezone.utc)
+    otp_code = generate_pairing_code(
+        generation_timestamp=generation_time, device_id=headset_id)
+    # 2. store it in the database
+    from auth.repo import create_pairing_code
+    record = create_pairing_code(user_id=None, device_id=headset_id,
+                                 code=otp_code, generation_time=generation_time, expiration=generation_time + timedelta(minutes=5))
+    # 3. Return the OTP and its expiry time
+    return GenerateOTPResponse(otp=otp_code, expiry=5, pairing_id=record.id)
+
 
 # a route to enter the otp on the website
 
 
 @auth.post("/enterotp", response_model=BaseResponse[str])
 async def enter_otp_for_headset(
-        otp: str= Body("OTP"), auth_user: UserOut = Depends(verify_token_header)):
+        otp: str = Body("OTP"), auth_user: UserOut = Depends(verify_token_header)):
     """Enters the One-Time Password (OTP) for a given headset.
-
     Args:
         otp (str): The OTP to enter.
-
     Returns:
         BaseResponse[str]: A response model containing the status of the operation.
-
     Raises:
         HTTPException: (401 Unauthorized) If the user is not authenticated.
     """
-    # 1. Check if this headset is already paired with a user
-    # 2. Check if the OTP is valid
-    # 3. Pair the headset with the user
-    # 4. Return the status of the operation
+    try:
+        # 1. check if the user is authenticated
+        from common.util.security import access_check
+        access_check(auth_user, ["admin", "patient"])
+        # 2. Check if the OTP is valid
+        from auth.repo import get_pairing_code, pair_user_to_device, validate_pairing
+        pairing_code = validate_pairing(device_id=auth_user.device_id, otp=otp)
+        # 3. Pair the headset with the user
+        pair_user_to_device(user_id=auth_user.id,
+                            device_id=pairing_code.device_id)
 
-    return BaseResponse(data="Headset paired successfully")
+        # 4. Return the status of the operation
+
+        return BaseResponse(data="Headset paired successfully")
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise HTTPException(e.status_code, str(e.detail))
+        raise HTTPException(400, "Failed to pair headset, " + str(e))
 
 
 @auth.post("/headset/login/obtaintoken", response_model=UserToken)
@@ -110,7 +127,9 @@ async def headset_obtain_token(headset_id: str, otp: str):
     """ Obtain token for the headset to use for authentication.
     Note that this can be done only once for a given OTP.
     You should use the usual refresh token endpoint to renew the token."""
-    # find user by headset_id
-    # validate otp
-    # generate token
-    pass
+    from auth.service import get_user_from_pairing
+    try:
+        user = get_user_from_pairing(headset_id, otp)
+        return generate_tokens(user)
+    except Exception as e:
+        raise HTTPException(400, str(e))

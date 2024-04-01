@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 class GenerateOTPResponse(BaseModel):
     otp: str
-    pairing_id: str
+    pairing_id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
     expiry: int
 
 
@@ -41,22 +41,19 @@ class BaseUser(MongoBaseModel):
             raise ValueError("Either email or phone must be provided")
         return v
 
-    # current_subscription: Field(None, alias="subscription_id")
-    # logo_link: str
-    # business_id: str
-    # customer_id: str
-
 
 class UserInDB(BaseUser):
     # id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
     encrypted_pass: str = Field("None")
     valid_date: Optional[datetime] = None  # logs out users before this date
+    device_id: Optional[str] = None
 
 
 class UserOut(CommonModel):
     id: Optional[str] = Field(None, alias="_id")
     username: str
     role: RoleEnum = Field(RoleEnum.guest)
+    device_id: Optional[str] = None
 
 
 class UserToken(CommonModel):
@@ -76,10 +73,9 @@ class AdminInDB(CommonModel):
     date_created: datetime = Field(datetime.utcnow())
 
 
-class PairingCodeRecord(CommonModel):
-    id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
-    user_id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
-    device_id: Annotated[ObjectId, ObjectIdPydanticAnnotation]
+class PairingCodeRecord(MongoBaseModel):
+    user_id: Optional[Annotated[ObjectId, ObjectIdPydanticAnnotation]] = None
+    device_id: str
     code: str
     generation_timestamp: datetime
     expiration_timestamp: datetime
