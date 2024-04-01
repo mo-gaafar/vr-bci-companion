@@ -5,13 +5,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python Debugger: FastAPI",
+      "name": "Python Debugger: GUI",
       "type": "debugpy",
       "request": "launch",
-      "module": "uvicorn",
-      "args": ["main:app", "--reload"],
-      "cwd": "${workspaceFolder}/src",
-      "jinja": true
+      "program": "local_ui.py",
+      "console": "integratedTerminal"
     }
   ]
 }

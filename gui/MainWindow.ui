@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>396</width>
-    <height>450</height>
+    <width>771</width>
+    <height>587</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,66 +20,89 @@
    <double>1.000000000000000</double>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_2">
-    <item>
-     <widget class="QPushButton" name="connectButton">
-      <property name="text">
-       <string>Connect to BCI</string>
-      </property>
-     </widget>
-    </item>
-    <item>
+   <layout class="QGridLayout" name="gridLayout_6">
+    <item row="0" column="0">
      <widget class="QGroupBox" name="groupBox_3">
       <property name="title">
        <string>BCI Connection</string>
       </property>
-      <layout class="QGridLayout" name="gridLayout_6">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>Connection Method:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QComboBox" name="comboBox">
-         <item>
-          <property name="text">
-           <string>None</string>
-          </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <layout class="QGridLayout" name="gridLayout_7">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Connection Method:</string>
+           </property>
+          </widget>
          </item>
-         <item>
-          <property name="text">
-           <string>PyLSL</string>
-          </property>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="comboBox_connection">
+           <item>
+            <property name="text">
+             <string>None</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>LSL</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Serial</string>
+            </property>
+           </item>
+          </widget>
          </item>
-         <item>
-          <property name="text">
-           <string>Serial</string>
-          </property>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Connection Status:</string>
+           </property>
+          </widget>
          </item>
-        </widget>
+         <item row="1" column="1">
+          <widget class="QLabel" name="label_connection_status">
+           <property name="text">
+            <string>Status</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Connection Status:</string>
+       <item>
+        <spacer name="verticalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>Status</string>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
          </property>
-        </widget>
+        </spacer>
        </item>
-       <item row="2" column="0" colspan="2">
-        <widget class="QGroupBox" name="groupBox_4">
+       <item>
+        <widget class="QGroupBox" name="groupSerial">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="title">
           <string>Serial</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_5">
+          <item row="1" column="2">
+           <widget class="QPushButton" name="pushButton_3">
+            <property name="text">
+             <string>Refresh Ports</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QComboBox" name="comboBox_2"/>
+          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="label_4">
             <property name="text">
@@ -87,7 +110,7 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1" rowspan="3">
+          <item row="0" column="3" rowspan="3">
            <spacer name="verticalSpacer_2">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -100,21 +123,11 @@
             </property>
            </spacer>
           </item>
-          <item row="1" column="0">
-           <widget class="QComboBox" name="comboBox_2"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QPushButton" name="pushButton_3">
-            <property name="text">
-             <string>Refresh Ports</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </widget>
        </item>
-       <item row="3" column="0" colspan="2">
-        <widget class="QGroupBox" name="groupBox">
+       <item>
+        <widget class="QGroupBox" name="groupLSL">
          <property name="title">
           <string>LSL Stream Configuration</string>
          </property>
@@ -129,7 +142,7 @@
              </widget>
             </item>
             <item row="1" column="0">
-             <widget class="QLineEdit" name="lineEdit">
+             <widget class="QLineEdit" name="lineEdit_stream1name">
               <property name="text">
                <string>obci_eeg1</string>
               </property>
@@ -143,7 +156,10 @@
              </widget>
             </item>
             <item row="3" column="0">
-             <widget class="QComboBox" name="comboBox_3">
+             <widget class="QComboBox" name="comboBox_stream1dt">
+              <property name="currentIndex">
+               <number>2</number>
+              </property>
               <item>
                <property name="text">
                 <string>Disabled</string>
@@ -178,7 +194,7 @@
              </widget>
             </item>
             <item row="1" column="0">
-             <widget class="QLineEdit" name="lineEdit_2">
+             <widget class="QLineEdit" name="lineEdit_stream2name">
               <property name="text">
                <string>obci_eeg2</string>
               </property>
@@ -192,7 +208,10 @@
              </widget>
             </item>
             <item row="3" column="0">
-             <widget class="QComboBox" name="comboBox_4">
+             <widget class="QComboBox" name="comboBox_stream2dt">
+              <property name="currentIndex">
+               <number>3</number>
+              </property>
               <item>
                <property name="text">
                 <string>Disabled</string>
@@ -227,7 +246,7 @@
              </widget>
             </item>
             <item row="1" column="0">
-             <widget class="QLineEdit" name="lineEdit_3">
+             <widget class="QLineEdit" name="lineEdit_stream3name">
               <property name="text">
                <string>obci_eeg3</string>
               </property>
@@ -241,7 +260,10 @@
              </widget>
             </item>
             <item row="3" column="0">
-             <widget class="QComboBox" name="comboBox_5">
+             <widget class="QComboBox" name="comboBox_stream3dt">
+              <property name="currentIndex">
+               <number>1</number>
+              </property>
               <item>
                <property name="text">
                 <string>Disabled</string>
@@ -279,21 +301,28 @@
             </property>
            </spacer>
           </item>
-          <item row="1" column="0" colspan="3">
-           <widget class="QPushButton" name="pushButton_4">
-            <property name="text">
-             <string>Lock-In</string>
-            </property>
-           </widget>
-          </item>
          </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_LSL_lock">
+         <property name="text">
+          <string>Lock-In</string>
+         </property>
         </widget>
        </item>
       </layout>
      </widget>
     </item>
-    <item>
-     <widget class="QPushButton" name="pushButton_2">
+    <item row="1" column="0">
+     <widget class="QPushButton" name="connectButton">
+      <property name="text">
+       <string>Connect to BCI</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QPushButton" name="pushButton_start_backend">
       <property name="text">
        <string>Start Backend</string>
       </property>
@@ -306,12 +335,30 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>396</width>
-     <height>21</height>
+     <width>771</width>
+     <height>24</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuAbout">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionHow_to_use"/>
+    <addaction name="actionAbout_us"/>
+   </widget>
+   <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionHow_to_use">
+   <property name="text">
+    <string>How to use</string>
+   </property>
+  </action>
+  <action name="actionAbout_us">
+   <property name="text">
+    <string>About us</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
