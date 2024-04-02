@@ -1,9 +1,6 @@
-from openbci_stream.acquisition import Cyton
-import numpy as np
 import logging
 import threading
 from collections import deque
-from PyQt6 import QtCore
 
 import time
 
@@ -11,6 +8,28 @@ import time
 class ConnectionStatus(QtCore.QObject):
     signal_quality_changed = QtCore.pyqtSignal(int)
     connection_status_changed = QtCore.pyqtSignal(str)
+
+
+class ConnectionStrategy:  # Abstract Base Class
+    def connect(self):
+        raise NotImplementedError()
+
+    def disconnect(self):
+        raise NotImplementedError()
+
+
+class SerialConnectionStrategy(ConnectionStrategy):
+    # ... implementation for serial connection ...
+    pass
+
+
+class LSLConnectionStrategy(ConnectionStrategy):
+    # ... implementation for LSL connection ...
+    def connect(self):
+        raise NotImplementedError
+
+    def disconnect(self):
+        raise NotImplementedError
 
 
 class BCIStreamer:
@@ -30,31 +49,13 @@ class BCIStreamer:
 
     def connect(self):
         if self.connection_type == 'serial':
-            if self._connect_thread is None:
-                self._connect_thread = threading.Thread(
-                    target=self._connect_loop)
-                self._connect_thread.start()
+            self.strategy = SerialConnectionStrategy()
+        elif self.connection_type == 'pylsl':
+            self.strategy = LSLConnectionStrategy()
+        else:
+            raise ValueError("Invalid connection type")
 
-        if self.connection_type == 'pylsl':
-            stream_names = ['obci_eeg1', 'obci_eeg2', 'obci_eeg3']
-            self.inlets = []
-
-            print("Searching for LSL streams...")
-            for name in stream_names:
-                streams = resolve_streams(wait_time=2.0)  # Find streams
-
-                for stream in streams:
-                    if stream.name() == name:
-                        self.inlets.append(StreamInlet(stream))
-                        break  # Move on after the correct stream is found
-
-                if not self.inlets:
-                    raise RuntimeError(
-                        f"Could not find LSL stream with name: {name}")
-
-            self.is_connected = True
-            self.connection_status.connection_status_changed.emit(
-                'Connected (LSL)')
+        self.strategy.connect()  # Delegate to the strategy
 
     def _connect_loop(self):
         while True:

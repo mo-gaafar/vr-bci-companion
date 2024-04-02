@@ -5,8 +5,6 @@ from fastapi import FastAPI, Header
 from fastapi.responses import HTMLResponse, RedirectResponse
 from config import VERSION
 from config import conf, root_prefix
-
-
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -92,7 +90,7 @@ async def redoc_html():
 @app.get("/", response_class=HTMLResponse)
 async def root():
     '''Contains webpage with html content'''
-    from gui.backend_home import html_content
+    from src.static.backend_home import html_content
     html = html_content
     return html
 
