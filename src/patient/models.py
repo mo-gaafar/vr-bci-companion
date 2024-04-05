@@ -1,3 +1,4 @@
+from pydantic import EmailStr
 from typing import Optional
 from typing import Annotated
 from common.models import ObjectIdPydanticAnnotation
@@ -30,7 +31,7 @@ class PatientOut(MongoBaseModel):
 class PatientSignup(BaseModel):
     username: str
     password: str
-    email: str
+    email: EmailStr
     phone: str
     first_name: str
     last_name: str

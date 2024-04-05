@@ -1,3 +1,4 @@
+from common.exceptions import RepositoryException
 from typing import Optional
 from common.util.misc import check_empty
 from .models import PairingCodeRecord
@@ -50,15 +51,15 @@ def get_user_by_token(token: str) -> UserInDB:
 def create_auth_user(user: UserIn):
     # check if user exists
     if MongoDB.authuser.find_one({"username": user.username}) is not None:
-        raise Exception("User already exists")
+        raise RepositoryException("User already exists")
     # check if email exists
     if user.email is not None:
         if MongoDB.authuser.find_one({"email": user.email}) is not None:
-            raise Exception("Email already exists")
+            raise RepositoryException("Email already exists")
     # check if phone number exists
     if user.phone is not None:
         if MongoDB.authuser.find_one({"phone": user.phone}) is not None:
-            raise Exception("Phone number already exists")
+            raise RepositoryException("Phone number already exists")
     # create user
     user = UserInDB(**user.dict(), encrypted_pass=hash_password(user.password))
     id = MongoDB.authuser.insert_one(user.dict()).inserted_id
@@ -75,7 +76,8 @@ def create_pairing_code(user_id: str, device_id: str, code: str, generation_time
         #  check if there are duplicate pairing codes
         record = MongoDB.pairingcodes.find({"code:": record["code"]})
         if check_empty(record) is False:
-            raise Exception("Duplicated pairing code, regenerate code")
+            raise RepositoryException(
+                "Duplicated pairing code, regenerate code")
 
     record = PairingCodeRecord(
         user_id=user_id, device_id=device_id, code=code,
@@ -95,8 +97,8 @@ def pair_user_to_device(user_id: str, device_id: str) -> None:
     # add user_id to pairing code
     result = MongoDB.pairingcodes.update_one({"device_id": device_id}, {
         "$set": {"user_id": user_id}})
-    if result.matched_count == 0:
-        raise Exception("Pairing code not found")
+    if result.RepositoryExceptionount == 0:
+        raise RepositoryException("Pairing code not found")
     # add device_id to user
     MongoDB.authuser.update_one({"_id": ObjectId(user_id)}, {
         "$set": {"device_id": device_id}})
@@ -115,28 +117,28 @@ def fetch_user_by_device_id(device_id: str) -> UserOut:
     """Fetches the user associated with a given device ID."""
     user = MongoDB.authuser.find_one({"device_id": device_id})
     if user is None:  # Handle the case where no user is found
-        raise Exception("No user found for device ID")
+        raise RepositoryException("No user found for device ID")
     return UserOut(**db_to_dict(user))
 
 # FIXME i think this belongs in service?
 
 
-def validate_pairing(otp: str, device_id: Optional[str] = None, check_duplicate = True) -> PairingCodeRecord:
+def validate_pairing(otp: str, device_id: Optional[str] = None, check_duplicate=True) -> PairingCodeRecord:
     """Validates if a device is paired and the pairing code is not expired."""
 
     record = MongoDB.pairingcodes.find_one(
         {"code": otp})
 
     if check_empty(record):
-        raise Exception("Device is not paired")
+        raise RepositoryException("Device is not paired")
     if device_id is not None:  # checks device id if given
         record["device_id"] == device_id
     if record["user_id"] is not None:
         if check_duplicate:
-            raise Exception("Device is already paired")
+            raise RepositoryException("Device is already paired")
 
     if record["expiration_timestamp"].replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
-        raise Exception("Pairing code is expired")
+        raise RepositoryException("Pairing code is expired")
 
     return PairingCodeRecord(**record)
 

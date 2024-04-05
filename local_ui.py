@@ -32,11 +32,8 @@ class ServerControlGUI(QMainWindow):
         self.plot_thread = PlotThread(self)
         self.plot_popup = None
 
-        
-
         # initialize ui connectors
         interface.init_connectors(self)
-
         interface.init_layout(self)
 
     @pyqtSlot(str)

@@ -1,3 +1,8 @@
+from common.exceptions import RepositoryException
+from pydantic import ValidationError
+from starlette.exceptions import HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from auth.routes import auth
 from patient.routes import router as patient
 from fastapi import Request
@@ -51,6 +56,40 @@ app.include_router(patient, prefix=root_prefix, tags=["patient"])
 app.include_router(auth, prefix=root_prefix, tags=["auth"])
 
 
+@app.exception_handler(Exception)
+async def validation_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Internal server error, unhandled exception",
+                 "details": str(exc)},
+    )
+
+
+@app.exception_handler(RepositoryException)
+async def repository_exception_handler(request: Request, exc: RepositoryException):
+    return JSONResponse(
+        status_code=400,
+        content={"message": "Data validation error",
+                 "details": str(exc)},
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": exc.detail},
+    )
+
+
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"message": "Validation error", "details": exc.errors()},
+    )
+
+
 @app.get(f"{root_prefix}/healthcheck")
 async def healthcheck():
     return {"status": "ok"}
@@ -90,7 +129,7 @@ async def redoc_html():
 @app.get("/", response_class=HTMLResponse)
 async def root():
     '''Contains webpage with html content'''
-    from src.static.backend_home import html_content
+    from static.backend_home import html_content
     html = html_content
     return html
 

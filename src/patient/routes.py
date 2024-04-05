@@ -2,7 +2,7 @@ from common.util.security import access_check
 from bson import ObjectId
 
 import pymongo
-from .models import PatientOut, PatientInDB, PatientSignup, ExerciseRecord
+from patient.models import PatientOut, PatientInDB, PatientSignup, ExerciseRecord
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import List
@@ -26,7 +26,12 @@ def get_patient_repo():
 async def signup(patient: PatientSignup, repo: PatientRepository = Depends(get_patient_repo)):
     # creates a new auth user and then creates a new patient
     from .service import patient_signup
-    return await patient_signup(patient, repo)
+    # try:
+    patient = await patient_signup(patient, repo)
+    return patient
+    # except Exception as e:
+        # raise HTTPException(
+        #     status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # @router.post("/", response_model=Patient, status_code=status.HTTP_201_CREATED)
