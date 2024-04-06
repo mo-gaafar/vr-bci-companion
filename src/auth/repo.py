@@ -97,7 +97,7 @@ def pair_user_to_device(user_id: str, device_id: str) -> None:
     # add user_id to pairing code
     result = MongoDB.pairingcodes.update_one({"device_id": device_id}, {
         "$set": {"user_id": user_id}})
-    if result.RepositoryExceptionount == 0:
+    if result.matched_count == 0:
         raise RepositoryException("Pairing code not found")
     # add device_id to user
     MongoDB.authuser.update_one({"_id": ObjectId(user_id)}, {

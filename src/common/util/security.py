@@ -174,8 +174,8 @@ def safe_int(char):
 
 def generate_pairing_code(generation_timestamp: datetime, device_id: str):
     # Configuration (adjust as needed)
-    code_length = 8
-    random_digits = 5
+    code_length = 6
+    random_digits = 3
     seed = 593982
     time_component_digits = 2
     checksum_digits = 1
