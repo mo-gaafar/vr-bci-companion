@@ -7,9 +7,10 @@ def testapp():
     from server.main import app
     yield app
 
+from server.config import ROOT_PREFIX
 
 def test_root(testapp):
     client = TestClient(testapp)
-    response = client.get("/")
+    response = client.get(ROOT_PREFIX+"/healthcheck")
     assert response.status_code == 200
-    assert response.text == "Hello, world!"
+    assert response.json() == {"status": "ok"}

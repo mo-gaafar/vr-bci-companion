@@ -1,10 +1,10 @@
 import pymongo
 from bson import ObjectId
 from typing import List
-from .models import PatientOut, ExerciseRecord, PatientUpdate, PatientInDB
 
 from typing import Optional
-from database import MongoDB
+from .models import PatientOut, ExerciseRecord, PatientUpdate, PatientInDB
+from server.database import MongoDB
 
 
 class PatientRepository:

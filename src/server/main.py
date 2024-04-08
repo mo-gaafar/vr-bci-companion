@@ -5,14 +5,14 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi import FastAPI, Header
 from fastapi.responses import HTMLResponse, RedirectResponse
-from .config import CONFIG, ROOT_PREFIX, VERSION
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from api import api_router
-from handlers import validation_exception_handler, http_exception_handler, repository_exception_handler, common_exception_handler
-from common.exceptions import RepositoryException
+from .config import CONFIG, ROOT_PREFIX, VERSION
+from .api import api_router
+from .handlers import validation_exception_handler, http_exception_handler, repository_exception_handler, common_exception_handler
+from server.common.exceptions import RepositoryException
 
 tags_metadata = [
     {
@@ -47,8 +47,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
+STATIC_DIR = "/server/static"
+from os import path
+if STATIC_DIR and path.isdir('.'+STATIC_DIR):
+    app.mount("/server/static", StaticFiles(directory="."+STATIC_DIR), name="static")
+else:
+    print("No static directory found")
+    print("Current directory: ", path.abspath(path.curdir))
+    print("Static directory: ", path.abspath(STATIC_DIR))
+    # print all available directories
+    # print("Available directories: ", [d for d in path.listdir(path.curdir) if path.isdir(d)])
+    
 
 # ROUTER INCLUDES
 app.include_router(api_router, prefix=ROOT_PREFIX)
@@ -71,8 +80,8 @@ def custom_swagger_ui_html():
         openapi_url=app.openapi_url,  # type: ignore
         title=app.title + " - Swagger UI",
         oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
-        swagger_js_url="/static/swagger-ui-bundle.js",
-        swagger_css_url="/static/swagger-ui.css",
+        swagger_js_url=STATIC_DIR+"/swagger-ui-bundle.js",
+        swagger_css_url=STATIC_DIR+"/swagger-ui.css",
     )
 
 
@@ -99,7 +108,7 @@ def redoc_html():
 @app.get("/", response_class=HTMLResponse)
 def root():
     '''Contains webpage with html content'''
-    from static.backend_home import html_content
+    from server.static.backend_home import html_content
     html = html_content
     return html
 

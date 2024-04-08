@@ -1,16 +1,15 @@
-from common.util.security import access_check
 from bson import ObjectId
-
 import pymongo
-from patient.models import PatientOut, PatientInDB, PatientSignup, ExerciseRecord
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import List
 
-from auth.service import verify_token_header
-from patient.models import PatientInDB, ExerciseRecord, PatientUpdate
-from common.models import SuccessfulResponse
-from patient.repo import PatientRepository
+from .repo import PatientRepository
+from .models import PatientOut, PatientInDB, PatientSignup, ExerciseRecord
+from .models import PatientInDB, ExerciseRecord, PatientUpdate
+from server.auth.service import verify_token_header
+from server.common.util.security import access_check
+from server.common.models import SuccessfulResponse
 
 router = APIRouter(prefix="/patient")
 
@@ -30,8 +29,8 @@ async def signup(patient: PatientSignup, repo: PatientRepository = Depends(get_p
     patient = await patient_signup(patient, repo)
     return patient
     # except Exception as e:
-        # raise HTTPException(
-        #     status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    # raise HTTPException(
+    #     status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # @router.post("/", response_model=Patient, status_code=status.HTTP_201_CREATED)

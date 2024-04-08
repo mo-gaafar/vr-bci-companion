@@ -1,14 +1,12 @@
 from bson import ObjectId
 from datetime import datetime
 from pydantic import BaseModel, Field, EmailStr, validator
-from common.models import CommonModel
 from typing import Optional, List, Annotated
-from common.models import ObjectIdPydanticAnnotation, MongoBaseModel
-# from common.models import PyObjectId as ObjId
-
 from enum import Enum
 
-from pydantic import BaseModel
+from server.common.models import CommonModel
+from server.common.models import ObjectIdPydanticAnnotation, MongoBaseModel
+# from common.models import PyObjectId as ObjId
 
 
 class GenerateOTPResponse(BaseModel):

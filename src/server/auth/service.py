@@ -1,23 +1,24 @@
 # from services.subscription import check_subscription_of_authuser
 from pydantic import EmailStr
-from auth.repo import validate_pairing, fetch_user_by_device_id
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from typing import Optional
 from fastapi import HTTPException, Depends
-from auth.models import RoleEnum
-from config import DEVELOPMENT
-from common.util.security import verify_token
-from auth.models import UserOut
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from auth.repo import get_user_by_token
 from bson import ObjectId
-from common.util.misc import db_to_dict
 from abc import ABC, abstractmethod
-from auth.models import UserOut, UserInDB, UserIn
-# from repo.auth_user import AuthUserRepository
-from database import MongoDB
-from common.util.security import generate_tokens, get_iat_from_token, verify_hash_password, hash_password, verify_token, optional_security, security
-from common.util.misc import id_to_str, obj_to_dict
 from datetime import datetime
+
+# from repo.auth_user import AuthUserRepository
+from server.config import DEVELOPMENT
+from server.auth.models import RoleEnum
+from server.auth.repo import validate_pairing, fetch_user_by_device_id
+from server.auth.models import UserOut
+from server.auth.repo import get_user_by_token
+from server.auth.models import UserOut, UserInDB, UserIn
+from server.database import MongoDB
+from server.common.util.security import generate_tokens, get_iat_from_token, verify_hash_password, hash_password, verify_token, optional_security, security
+from server.common.util.security import verify_token
+from server.common.util.misc import db_to_dict
+from server.common.util.misc import id_to_str, obj_to_dict
 
 REFRESH_TIME = 30  # days
 ACCESS_TIME = 15  # minutes

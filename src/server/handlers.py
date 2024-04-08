@@ -1,8 +1,8 @@
-from common.exceptions import RepositoryException
 from pydantic import ValidationError
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 
+from server.common.exceptions import RepositoryException
 
 # @app.exception_handler(Exception)
 async def common_exception_handler(request: Request, exc: Exception):

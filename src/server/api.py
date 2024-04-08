@@ -1,7 +1,8 @@
-from auth.routes import auth
-from patient.routes import router as patient
-from fastapi import APIRouter
 from fastapi.responses import JSONResponse
+from fastapi import APIRouter
+
+from server.auth.routes import auth
+from server.patient.routes import router as patient
 
 
 api_router = APIRouter(
@@ -14,3 +15,7 @@ api_router = APIRouter(
     #     500: {"model": ErrorResponse},
     # },
 )
+
+api_router.include_router(auth, tags=["auth"])
+api_router.include_router(patient, tags=["patient"])
+

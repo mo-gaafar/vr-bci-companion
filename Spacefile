@@ -4,14 +4,13 @@ micros:
     src: src/
     path: api
     engine: python3.9
-    run: uvicorn main:app
+    run: uvicorn server.main:app
     public_routes:
       - "*/attendee/*" # This Micro is served under `/api` so if we want to make `/api/public` available to the outside we only need to specify `/public`
       - "*/docs*"
       - "*/event/*"
       - "*"
     presets:
-      # requirements: requirements.txt
       env:
         - name: "MONGO_URI"
           description: "MongoDB URI"

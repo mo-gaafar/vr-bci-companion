@@ -16,7 +16,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
-      "args": ["main:app", "--reload"],
+      "args": ["server.main:app", "--reload"],
       "cwd": "${workspaceFolder}/src",
       "jinja": true
     }

@@ -1,18 +1,18 @@
-from typing import Annotated
-from pydantic import EmailStr
-from .models import ResetPasswordRequest
-from common.models import BaseResponse
-from fastapi import Body
-from common.util.misc import db_to_dict
-from auth.repo import get_auth_user_by_id
-from auth.service import login, refresh_token_svc, logout, verify_token_header
-from typing import Optional
-from database import MongoDB
 from datetime import datetime, timezone, timedelta
 from bson.objectid import ObjectId
 from fastapi import APIRouter, Header, HTTPException, Form, UploadFile, File, Depends, Query
-from auth.models import UserToken, BaseUser, UserInDB, UserOut, GenerateOTPResponse
-from common.util.security import generate_tokens, verify_hash_password, get_token_header, verify_token
+from typing import Annotated
+from pydantic import EmailStr
+from typing import Optional
+from fastapi import Body
+from .models import ResetPasswordRequest
+
+from server.auth.repo import get_auth_user_by_id
+from server.common.util.misc import db_to_dict
+from server.auth.service import login, refresh_token_svc, logout, verify_token_header
+from server.auth.models import UserToken, BaseUser, UserInDB, UserOut, GenerateOTPResponse
+from server.common.models import BaseResponse
+from server.common.util.security import generate_tokens, verify_hash_password, get_token_header, verify_token
 
 auth = APIRouter(prefix="/auth", tags=["auth"])
 

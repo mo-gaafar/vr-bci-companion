@@ -1,11 +1,12 @@
 from pydantic import EmailStr
 from typing import Optional
 from typing import Annotated
-from common.models import ObjectIdPydanticAnnotation
 from bson import ObjectId
 from pydantic import BaseModel, Field, validator
 from datetime import datetime
-from common.models import MongoBaseModel, ObjectIdPydanticAnnotation
+
+from server.common.models import MongoBaseModel, ObjectIdPydanticAnnotation
+from server.common.models import ObjectIdPydanticAnnotation
 
 
 class PatientOut(MongoBaseModel):
