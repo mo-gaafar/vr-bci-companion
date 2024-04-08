@@ -1,11 +1,12 @@
 
+from config import CONFIG
 from secrets import token_hex  # For stronger randomness
 import hashlib
 import random
 import time
 from common.util.misc import id_to_str
 from auth.models import UserInDB, UserOut, RoleEnum
-from config import SECRET_KEY, DEVELOPMENT, ADMIN_PASS
+from config import DEVELOPMENT, CONFIG
 import bcrypt
 from auth.models import UserInDB, UserOut, UserToken
 import jwt
@@ -19,7 +20,7 @@ optional_security = HTTPBearer(auto_error=False)
 
 
 def super_admin_auth(admin_auth: str = Header(...)):
-    if admin_auth != ADMIN_PASS:
+    if admin_auth != CONFIG.ADMIN_PASS:
         raise HTTPException(status_code=401, detail="Invalid authentication")
 
 
@@ -46,7 +47,7 @@ def get_token_header(authorization: Optional[HTTPAuthorizationCredentials] = Dep
 
 def get_iat_from_token(token: str) -> datetime:
     # decode token
-    payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+    payload = jwt.decode(token, CONFIG.SECRET_KEY, algorithms=['HS256'])
     # get user from payload
     iat = payload.get("iat")
     # convert to datetime
@@ -107,7 +108,7 @@ def create_defult_password(username: str):
 
 def get_user_from_token(token: str) -> UserOut:
     # decode token
-    payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+    payload = jwt.decode(token, CONFIG.SECRET_KEY, algorithms=['HS256'])
     # get user from payload
     user = id_to_str(payload.get("user"))
     user_out = UserOut(**user)
@@ -140,14 +141,14 @@ def generate_tokens(user: UserOut) -> UserToken:
         'iat': utcnow  # Access token issued at
     }
     access_token = jwt.encode(access_token_payload,
-                              SECRET_KEY, algorithm='HS256')
+                              CONFIG.SECRET_KEY.get_secret_value(), algorithm='HS256')
     refresh_token_payload = {
         'user': user.dict(),
         'exp': datetime.utcnow() + timedelta(days=30),  # Refresh token expiration time
         'iat': datetime.utcnow()  # Refresh token issued at
     }
     refresh_token = jwt.encode(
-        refresh_token_payload, SECRET_KEY, algorithm='HS256')
+        refresh_token_payload, CONFIG.SECRET_KEY.get_secret_value(), algorithm='HS256')
 
     return UserToken(auth_token=access_token, refresh_token=refresh_token)
 

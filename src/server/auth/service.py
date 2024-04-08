@@ -1,4 +1,5 @@
 # from services.subscription import check_subscription_of_authuser
+from pydantic import EmailStr
 from auth.repo import validate_pairing, fetch_user_by_device_id
 from typing import Optional
 from fastapi import HTTPException, Depends
@@ -107,10 +108,66 @@ def optional_token_header(authorization: HTTPAuthorizationCredentials = Depends(
         return None
 
 
-def start_pairing_session(auth_user: UserOut) -> str:
-    # 1. Generate
+def confirm_email(email: str, token: str):
+    # user = UsersDB().get_user(email)
+    # if not decode_access_token(token).get("username") == user.username:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+    #     )
+    # user.disabled = False
+    # UsersDB().update_user(user)
+    pass
 
-    return "123456"
+
+def resend_confirmation_email(email: EmailStr):
+    # user = UsersDB().get_user(email)
+    # if not user.disabled:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="This account has already been verified",
+    #     )
+    # await send_confirmation_email(user)
+    pass
+
+
+def send_confirmation_email(user: UserOut):
+    # print("Sending confirmation email")
+    # mailer = Mailer()
+    # confirmation_token = create_access_token(data=user.model_dump())
+    # confirmation_link = f"{APP_SETTINGS.APP_DOMAIN}/auth/confirm/{confirmation_token}?email={user.email}"
+    # mailer.send_confirmation_email(user.email, confirmation_link)
+    pass
+
+
+def forgot_password(email: EmailStr):
+    # user = UsersDB().get_user(email)
+    # if user.disabled:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="This account has not been verified yet, please confirm your account first",
+    #     )
+    # mailer = Mailer()
+    # reset_token = create_access_token(data=user.model_dump())
+
+    # reset_link = (
+    #     f"{APP_SETTINGS.CLIENT_DOMAIN}/reset-password/{reset_token}?email={user.email}"
+    # )
+    # mailer.send_reset_password_email(user.email, reset_link)
+    pass
+
+
+def reset_password(email: EmailStr, token: str, new_password: str):
+    # user = UsersDB().get_user(email)
+    # if not decode_access_token(token).get("username") == user.username:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+    #     )
+    # user.hashed_password = get_password_hash(new_password)
+    # UsersDB().update_user(user)
+    # Mailer().send_notification_email(
+    #     user.email, "Your password has been reset successfully"
+    # )
+    pass
 
 
 def get_user_from_pairing(device_id: str, otp: str) -> UserOut:
@@ -120,93 +177,3 @@ def get_user_from_pairing(device_id: str, otp: str) -> UserOut:
     from common.util.security import verify_code
     verify_code(pairing.generation_timestamp, pairing.device_id, pairing.code)
     return fetch_user_by_device_id(device_id)
-
-# class BaseAuth(ABC):
-#     @abstractmethod
-#     def login(self, username: str, password: str) -> str:
-#         raise NotImplementedError
-
-#     @abstractmethod
-#     def logout(self, username: str) -> None:
-#         raise NotImplementedError
-
-#     @abstractmethod
-#     def refresh_token(self, refresh_token: str) -> str:
-#         raise NotImplementedError
-
-#     @abstractmethod
-#     def verify_token(self, token: str) -> str:
-#         raise NotImplementedError
-
-#     @abstractmethod
-#     def get_user_from_token(self, token: str) -> UserOut:
-#         raise NotImplementedError
-
-#     @abstractmethod
-#     def get_user_from_refresh_token(self, refresh_token: str) -> UserOut:
-#         raise NotImplementedError
-
-#     @abstractmethod
-#     def get_user_from_username(self, username: str) -> UserOut:
-#         raise NotImplementedError
-
-#     @abstractmethod
-#     def get_user_from_email(self, email: str) -> UserOut:
-#         raise NotImplementedError
-
-
-# class JWTBearerAuthService(BaseAuth):
-#     def __init__(self, auth_user_repo: AuthUserRepository):
-#         self.secret_key = secret_key
-#         self.algorithm = algorithm
-#         self.access_token_expire_minutes = access_token_expire_minutes
-#         self.refresh_token_expire_minutes = refresh_token_expire_minutes
-#         self.auth_user_repo = auth_user_repo
-
-#     def login(self, username: str, password: str) -> UserToken:
-#         # get user from db
-#         user = self.auth_user_repo.get_by_username(username)
-#         # check password
-#         if not self.auth_user_repo.verify_password(username, password):
-#             raise Exception("Incorrect password")
-#         # check user is active
-#         if not user.is_active:
-#             raise Exception("Inactive user")
-#         # create token
-#         return self.create_token(user)
-
-#     def logout(self, username: str) -> None:
-#         # get user from db
-#         user = self.auth_user_repo.get_by_username(username)
-#         # soft delete user
-#         self.auth_user_repo.soft_delete(user)
-
-#     def refresh_token(self, refresh_token: str) -> UserToken:
-#         # get user from refresh token
-#         user = self.get_user_from_refresh_token(refresh_token)
-#         # create token
-#         return self.create_token(user)
-
-#     def verify_token(self, token: str) -> UserOut:
-#         # get user from token
-#         return self.get_user_from_token(token)
-
-#     def get_user_from_token(self, token: str) -> UserOut:
-#         # decode token
-#         payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-#         # get user from db
-#         return self.auth_user_repo.get_by_username(payload.get("sub"))
-
-#     def get_user_from_refresh_token(self, refresh_token: str) -> UserOut:
-#         # decode token
-#         payload = jwt.decode(refresh_token, self.secret_key, algorithms=[self.algorithm])
-#         # get user from db
-#         return self.auth_user_repo.get_by_username(payload.get("sub"))
-
-#     def get_user_from_username(self, username: str) -> UserOut:
-#         # get user from db
-#         return self.auth_user_repo.get_by_username(username)
-
-#     def get_user_from_email(self, email: str) -> UserOut:
-#         # get user from db
-#         return self.auth_user_repo.get_by_email

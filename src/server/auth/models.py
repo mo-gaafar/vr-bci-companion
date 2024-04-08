@@ -79,3 +79,10 @@ class PairingCodeRecord(MongoBaseModel):
     code: str
     generation_timestamp: datetime
     expiration_timestamp: datetime
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    token: str
+    new_password: Annotated[str,
+                            Field(..., min_length=8, examples=['password123'])]

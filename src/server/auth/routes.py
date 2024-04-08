@@ -1,3 +1,6 @@
+from typing import Annotated
+from pydantic import EmailStr
+from .models import ResetPasswordRequest
 from common.models import BaseResponse
 from fastapi import Body
 from common.util.misc import db_to_dict
@@ -18,7 +21,7 @@ auth = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @auth.post("/login/obtaintoken", response_model=UserToken)
-async def login_token(username: str = Body(...), password: str = Body(...)):
+def login_token(username: str = Body(...), password: str = Body(...)):
     try:
         return login(username, password)
     except Exception as e:
@@ -28,7 +31,7 @@ async def login_token(username: str = Body(...), password: str = Body(...)):
 
 
 @auth.post("/login/refreshtoken", response_model=UserToken)
-async def refresh_token(refresh_token: Optional[str] = None, token: Optional[UserToken] = Depends(get_token_header)):
+def refresh_token(refresh_token: Optional[str] = None, token: Optional[UserToken] = Depends(get_token_header)):
     '''Obtain token from refresh token or HTTPBearer and also renew refresh token'''
     if refresh_token is None:
         # get refresh token from header
@@ -47,7 +50,7 @@ async def refresh_token(refresh_token: Optional[str] = None, token: Optional[Use
 
 
 @auth.delete("/logout", tags=["backend_admin"])
-async def logout_user(auth_user: UserOut = Depends(verify_token_header)):
+def logout_user(auth_user: UserOut = Depends(verify_token_header)):
     try:
         logout(auth_user)
         return {"detail": "Logged out successfully"}
@@ -55,8 +58,43 @@ async def logout_user(auth_user: UserOut = Depends(verify_token_header)):
         raise HTTPException(400, str(e))
 
 
+# TODO: Will be redirected to the frontend
+@auth.get("/confirm/{token}", response_model=BaseResponse[None])
+def confirm_email(email: EmailStr, token: str):
+    # auth_service.confirm_email(email, token)
+    return {"status": "success", "message": "Email confirmed successfully", "data": None}
+
+
+@auth.post("/resend-confirmation-email", response_model=BaseResponse[None])
+def resend_confirmation_email(email: EmailStr):
+    # await auth_service.resend_confirmation_email(email)
+    return {"status": "success", "message": "Confirmation email resent successfully", "data": None}
+
+
+@auth.post("/forgot-password", response_model=BaseResponse[None])
+def forgot_password(email: EmailStr):
+    # auth_service.forgot_password(email)
+    return {"status": "success", "message": "Password reset link sent successfully", "data": None}
+
+# request body will contain token and new password and email
+
+
+@auth.post("/reset-password", response_model=BaseResponse[None])
+def reset_password(request: ResetPasswordRequest):
+    # auth_service.reset_password(
+    #     request.email, request.token, request.new_password)
+    return {"status": "success", "message": "Password reset successfully", "data": None}
+
+
+@auth.get("/users/me/", response_model=BaseResponse[UserOut], tags=["users"])
+def read_users_me(
+    current_user: Annotated[UserOut, Depends(verify_token_header)]
+):
+    return {"status": "success", "message": "User details retrieved successfully", "data": current_user}
+
+
 @auth.get("/headset/generateotp", response_model=GenerateOTPResponse)
-async def generate_otp_for_headset(
+def generate_otp_for_headset(
     headset_id: str
 ):
     """Generates a One-Time Password (OTP) for a given headset.
@@ -92,8 +130,8 @@ async def generate_otp_for_headset(
 
 
 @auth.post("/enterotp", response_model=BaseResponse[str])
-async def enter_otp_for_headset(
-        otp: str = Body("OTP"), auth_user: UserOut = Depends(verify_token_header)):
+def enter_otp_for_headset(
+        body: dict = {"code": "example"}, auth_user: UserOut = Depends(verify_token_header)):
     """Enters the One-Time Password (OTP) for a given headset.
     Args:
         otp (str): The OTP to enter.
@@ -108,6 +146,9 @@ async def enter_otp_for_headset(
         access_check(auth_user, ["admin", "patient"])
         # 2. Check if the OTP is valid
         from auth.repo import get_pairing_code, pair_user_to_device, validate_pairing
+        otp = body.get("code")
+        if otp is None:
+            raise HTTPException(422, "Wrong body format")
         pairing_code = validate_pairing(device_id=auth_user.device_id, otp=otp)
         # 3. Pair the headset with the user
         pair_user_to_device(user_id=auth_user.id,
@@ -123,7 +164,7 @@ async def enter_otp_for_headset(
 
 
 @auth.post("/headset/login/obtaintoken", response_model=UserToken)
-async def headset_obtain_token(headset_id: str, otp: str):
+def headset_obtain_token(headset_id: str, otp: str):
     """ Obtain token for the headset to use for authentication.
     Note that this can be done only once for a given OTP.
     You should use the usual refresh token endpoint to renew the token."""

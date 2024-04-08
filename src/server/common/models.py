@@ -176,6 +176,7 @@ class PaginatedList(BaseModel, Generic[T]):
 
 class BaseResponse(BaseModel, Generic[T]):
     data: T
+    message: str = "Success"
     detail: str = "Success"
 
 

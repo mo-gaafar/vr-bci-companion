@@ -1,21 +1,19 @@
-from common.exceptions import RepositoryException
+import uvicorn
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from auth.routes import auth
-from patient.routes import router as patient
-from fastapi import Request
 from fastapi import FastAPI, Header
 from fastapi.responses import HTMLResponse, RedirectResponse
-from config import VERSION
-from config import conf, root_prefix
+from .config import CONFIG, ROOT_PREFIX, VERSION
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-
-
 from fastapi.staticfiles import StaticFiles
+
+from api import api_router
+from handlers import validation_exception_handler, http_exception_handler, repository_exception_handler, common_exception_handler
+from common.exceptions import RepositoryException
+
 tags_metadata = [
     {
         "name": "usage guide",
@@ -37,7 +35,7 @@ tags_metadata = [
 
 
 app = FastAPI(docs_url=None, redoc_url=None, version=VERSION,
-              description="<h2> This is the backend for the virtual reality post-stroke rehabilitation game.</h2> <br> <br> The API is built using FastAPI and MongoDB, Hosted on Heroku. <br> API documentation is built automatically using Swagger and ReDoc. <br> <br> Built in Cairo University, Egypt", title="VR/BCI Backend API", favicon="static/favicon.ico", openapi_tags=tags_metadata)
+              description="<h2> This is the backend for the virtual reality post-stroke rehabilitation game.</h2> <br> <br> The API is built using FastAPI and MongoDB, Hosted on Heroku. <br> API documentation is built automatically using Swagger and ReDoc. <br> <br> Built in Cairo University, Egypt", title=CONFIG.APP_NAME, favicon="static/favicon.ico", openapi_tags=tags_metadata)
 
 origins = ['*']
 app.openapi_version = "3.0.2"  # Or a different OpenAPI 3.0.x version
@@ -51,52 +49,24 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-# app.include_router(, prefix=root_prefix)
-app.include_router(patient, prefix=root_prefix, tags=["patient"])
-app.include_router(auth, prefix=root_prefix, tags=["auth"])
+
+# ROUTER INCLUDES
+app.include_router(api_router, prefix=ROOT_PREFIX)
+
+# EXCEPTION HANDLERS
+app.add_exception_handler(RepositoryException, repository_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, common_exception_handler)
 
 
-@app.exception_handler(Exception)
-async def validation_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=500,
-        content={"message": "Internal server error, unhandled exception",
-                 "details": str(exc)},
-    )
-
-
-@app.exception_handler(RepositoryException)
-async def repository_exception_handler(request: Request, exc: RepositoryException):
-    return JSONResponse(
-        status_code=400,
-        content={"message": "Data validation error",
-                 "details": str(exc)},
-    )
-
-
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"message": exc.detail},
-    )
-
-
-@app.exception_handler(ValidationError)
-async def validation_exception_handler(request: Request, exc: ValidationError):
-    return JSONResponse(
-        status_code=422,
-        content={"message": "Validation error", "details": exc.errors()},
-    )
-
-
-@app.get(f"{root_prefix}/healthcheck")
-async def healthcheck():
+@app.get(f"{ROOT_PREFIX}/healthcheck")
+def healthcheck():
     return {"status": "ok"}
 
 
 @app.get("/docs", include_in_schema=False)
-async def custom_swagger_ui_html():
+def custom_swagger_ui_html():
     return get_swagger_ui_html(
         openapi_url=app.openapi_url,  # type: ignore
         title=app.title + " - Swagger UI",
@@ -107,27 +77,27 @@ async def custom_swagger_ui_html():
 
 
 @app.get("/detailed-guide", tags=["usage guide"])
-async def serve_guide():
+def serve_guide():
     # calls serve_markdown with the default file name and then redirects to it
-    return RedirectResponse(url=f"{root_prefix}/docs/guide/home", status_code=302)
+    return RedirectResponse(url=f"{ROOT_PREFIX}/docs/guide/home", status_code=302)
 
 
 # type: ignore
 @app.get(app.swagger_ui_oauth2_redirect_url,  # type: ignore
          include_in_schema=False)
-async def swagger_ui_redirect():
+def swagger_ui_redirect():
     return get_swagger_ui_oauth2_redirect_html()
 
 
 @app.get("/redoc", include_in_schema=False)
-async def redoc_html():
+def redoc_html():
     return get_redoc_html(openapi_url=app.openapi_url,  # type: ignore
                           title=app.title + " - ReDoc",
                           redoc_js_url="/static/redoc.standalone.js")
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
+def root():
     '''Contains webpage with html content'''
     from static.backend_home import html_content
     html = html_content
@@ -145,7 +115,8 @@ async def root():
 # delete_tmp_files()
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    uvicorn.run(app, host=conf["SERVER_DOMAIN"],  # type: ignore
-                port=int(conf["SERVER_PORT"]), log_level='info')
+#     uvicorn.run(app, host=CONFIG.SERVER_DOMAIN,  # type: ignore
+#                 port=int(CONFIG.PORT), log_level='info')
+

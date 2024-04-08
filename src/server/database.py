@@ -1,26 +1,26 @@
 from fastapi import Depends
 from pymongo import MongoClient
-from config import conf
+from config import CONFIG
 import ssl
 
 
 # ssl_context = ssl.create_default_context()
 # ssl_context.check_hostname = False
 # ssl_context.verify_mode = ssl.CERT_NONE
-uri = conf['MONGO_URI']
+uri = CONFIG.MONGO_URI
 # Create a new client and connect to the server
 conn = MongoClient(uri)
 
 # Currently used database
-MongoDB = conn[conf['MONGO_DB']]
+MongoDB = conn[CONFIG.MONGO_DB]
 
-if conf['PRODUCTION'] == 'False':
+if CONFIG.PRODUCTION == False:
     # Create a new database for testing
-    MongoDB = conn[conf['MONGO_DB_TEST']]
+    MongoDB = conn[CONFIG.MONGO_DB_TEST]
 
-if conf['PRODUCTION'] == 'True':
+if CONFIG.PRODUCTION == True:
     # Create a new database for production
-    MongoDB = conn[conf['MONGO_DB_PROD']]
+    MongoDB = conn[CONFIG.MONGO_DB]
 
 # Google Cloud Platform Image Database
 # GCPBucket =
