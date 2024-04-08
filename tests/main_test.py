@@ -1,16 +1,10 @@
-import pytest
 from fastapi.testclient import TestClient
-
-
-@pytest.fixture(scope="session")
-def testapp():
-    from server.main import app
-    yield app
-
+import pytest
 from server.config import ROOT_PREFIX
 
+
+@pytest.mark.usefixtures("testapp")
 def test_root(testapp):
-    client = TestClient(testapp)
-    response = client.get(ROOT_PREFIX+"/healthcheck")
+    response = testapp.get(ROOT_PREFIX+"/healthcheck")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}

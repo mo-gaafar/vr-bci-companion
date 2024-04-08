@@ -1,5 +1,5 @@
 from pydantic import Field, SecretStr
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import dotenv_values
 # from dateutil import tz
 # import pytz

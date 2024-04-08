@@ -28,8 +28,8 @@ class PatientOut(MongoBaseModel):
     #         }
     #     }
 
-
-class PatientSignup(BaseModel):
+from server.common.models import CommonModel
+class PatientSignup(CommonModel):
     username: str
     password: str
     email: EmailStr

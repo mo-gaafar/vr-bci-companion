@@ -26,7 +26,7 @@ async def signup(patient: PatientSignup, repo: PatientRepository = Depends(get_p
     # creates a new auth user and then creates a new patient
     from .service import patient_signup
     # try:
-    patient = await patient_signup(patient, repo)
+    patient =  patient_signup(patient, repo)
     return patient
     # except Exception as e:
     # raise HTTPException(
