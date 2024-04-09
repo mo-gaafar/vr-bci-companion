@@ -30,4 +30,4 @@ def test_signup(testapp):
         assert response.json() == {
             'details': 'User already exists', 'message': 'Data validation error'}
     else:
-        assert response.status_code == 200
+        assert response.status_code == 201

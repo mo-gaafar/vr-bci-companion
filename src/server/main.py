@@ -1,3 +1,4 @@
+from os import path
 import uvicorn
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException
@@ -48,16 +49,16 @@ app.add_middleware(
     allow_headers=["*"]
 )
 STATIC_DIR = "/server/static"
-from os import path
 if STATIC_DIR and path.isdir('.'+STATIC_DIR):
-    app.mount("/server/static", StaticFiles(directory="."+STATIC_DIR), name="static")
+    app.mount("/server/static",
+              StaticFiles(directory="."+STATIC_DIR), name="static")
 else:
     print("No static directory found")
     print("Current directory: ", path.abspath(path.curdir))
     print("Static directory: ", path.abspath(STATIC_DIR))
     # print all available directories
     # print("Available directories: ", [d for d in path.listdir(path.curdir) if path.isdir(d)])
-    
+
 
 # ROUTER INCLUDES
 app.include_router(api_router, prefix=ROOT_PREFIX)
@@ -102,7 +103,7 @@ def swagger_ui_redirect():
 def redoc_html():
     return get_redoc_html(openapi_url=app.openapi_url,  # type: ignore
                           title=app.title + " - ReDoc",
-                          redoc_js_url="/static/redoc.standalone.js")
+                          redoc_js_url=STATIC_DIR+"/redoc.standalone.js")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -128,4 +129,3 @@ def root():
 
 #     uvicorn.run(app, host=CONFIG.SERVER_DOMAIN,  # type: ignore
 #                 port=int(CONFIG.PORT), log_level='info')
-

@@ -12,6 +12,7 @@ def testapp():
     from server.config import CONFIG
     CONFIG.PRODUCTION = False
     app = TestClient(app)
+    
 
     yield app
 
@@ -24,4 +25,15 @@ def clear_test_db():
     # make sure its the test db
     if CONFIG.PRODUCTION:
         raise Exception("Cannot clear production db")
+    conn.drop_database(CONFIG.MONGO_DB_TEST)
+
+# setup and teardown for test db
+@pytest.fixture(scope="session")
+def setup_test_db():
+    from server.database import conn
+    # make sure its the test db
+    if CONFIG.PRODUCTION:
+        raise Exception("Cannot clear production db")
+    conn.drop_database(CONFIG.MONGO_DB_TEST)
+    yield
     conn.drop_database(CONFIG.MONGO_DB_TEST)

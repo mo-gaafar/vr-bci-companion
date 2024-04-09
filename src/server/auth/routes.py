@@ -86,7 +86,7 @@ def reset_password(request: ResetPasswordRequest):
     return {"status": "success", "message": "Password reset successfully", "data": None}
 
 
-@auth.get("/users/me/", response_model=BaseResponse[UserOut], tags=["users"])
+@auth.get("/users/me/", response_model=BaseResponse[UserOut])
 def read_users_me(
     current_user: Annotated[UserOut, Depends(verify_token_header)]
 ):

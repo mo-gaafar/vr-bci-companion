@@ -3,7 +3,8 @@ from fastapi import APIRouter
 
 from server.auth.routes import auth
 from server.patient.routes import router as patient
-
+from server.bci.routes import bci
+# from server.ml.routes import ml
 
 api_router = APIRouter(
     default_response_class=JSONResponse,
@@ -18,4 +19,4 @@ api_router = APIRouter(
 
 api_router.include_router(auth, tags=["auth"])
 api_router.include_router(patient, tags=["patient"])
-
+api_router.include_router(bci, tags=["bci"])
