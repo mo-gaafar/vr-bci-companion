@@ -1,30 +1,37 @@
+from .service import session_manager  # import the session manager instance
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi import WebSocket
 from fastapi import APIRouter, HTTPException, Path, Body
 from .models import CalibrationStartResponse, ClassificationStartRequest, ClassificationStartResponse, ClassificationResult
 
 bci = APIRouter(prefix="/bci", tags=["bci"])
 
+PLACEHOLDER_PROTOCOL = [
+    {"time": 3, "action": "Prepare"},
+    {"time": 5, "action": "Start Imagining Walking"},
+    {"time": 5, "action": "Stop and Rest"},
+    {"time": 5, "action": "Start Imagining Walking"},
+    {"time": 5, "action": "Stop and Rest"},
+    {"time": 5, "action": "Repeat or End"},
 
-@bci.post("/calibration/start", response_model=CalibrationStartResponse)
+]
+
+
+@bci.get("/calibration/start", response_model=CalibrationStartResponse)
 def start_calibration():
     # Implementation to initiate a calibration session
-    return CalibrationStartResponse(...)
+    return CalibrationStartResponse(message="Dummy calibration", sessionId="1234", protocol=PLACEHOLDER_PROTOCOL, start_time="2021-01-01T00:00:00Z")
 
 
 @bci.get("/calibration/status/{sessionId}", response_model=CalibrationStartResponse)
 def fetch_calibration_status(sessionId: str = Path(..., description="The session ID of the calibration session")):
     # Fetch and return the status of the specified calibration session
-    placeholder_walking_mi_protocol = [
-        {"time": 0, "action": "Prepare"},
-        {"time": 5, "action": "Start Imagining Walking"},
-        {"time": 15, "action": "Stop and Rest"},
-        {"time": 25, "action": "Repeat or End"},
-    ]
+
     # check session start time
-    return CalibrationStartResponse(message="Dummy calibration", sessionId=sessionId, protocol=placeholder_walking_mi_protocol, start_time="2021-01-01T00:00:00Z")
+    return CalibrationStartResponse(message="Dummy calibration", sessionId=sessionId, protocol=PLACEHOLDER_PROTOCOL, start_time="2021-01-01T00:00:00Z")
 
 
-@bci.post("/classification/start", response_model=ClassificationStartResponse)
+@bci.get("/classification/start", response_model=ClassificationStartResponse)
 def start_classification(request: ClassificationStartRequest):
     # Start a classification session using the specified model
     return ClassificationStartResponse(...)
@@ -38,22 +45,48 @@ def fetch_classification_result(sessionId: str = Path(..., description="The sess
 
 # open websocket in parallel with classification to stream data and save it
 
-@bci.websocket("/stream/{sessionId}")
-async def bci_websocket(websocket: WebSocket, sessionId: str = Path(..., description="The session ID of the calibration session")):
+
+@bci.websocket("/stream/{session_id}")
+async def bci_websocket(websocket: WebSocket, session_id: str = Path(..., description="The session ID of the calibration session")):
+    '''Open a WebSocket connection to stream data into the backend as long as the lsl stream is active. The WebSocket connection should be closed when the session is completed. Accumulate signal in local cache for later processing with the classification model or any related processing.
+
+    First frame should be the session ID. and Label for each channel. The following frames should be the EEG data.
+    Frame 1: initial_frame = {
+                "type": "START",
+                "session_id": "1234",
+                "channel_labels": ['T3', 'T4', 'C3', 'C4', 'O1', 'O2', 'P3', 'P4']
+            }
+    Frame 2: {"data": [1, 2, 3, 4, 5, 6, 7, 8],
+                "timestamp": 1234567890}
+    Frame End: {"type": "END"
+                "session_id": "1234"
+    }
+    '''
     # Open a WebSocket connection to stream data into the backend as long as the lsl stream is active
     # The WebSocket connection should be closed when the session is completed
     # accumulate signal in local cache for later processing with the classification model or any related processing
-    while True:
-        data = websocket.receive_text()
-        if data == "close":
-            await websocket.close()
-            break
-        else:
-            await websocket.send_text(f"Message text was: {data}")
-            # process data or save it to a file or database
-            # for example, save the data to a file with epoch timestamps for each  sample
+    await websocket.accept()
 
-            with open(f"{sessionId}_data.txt", "a") as f:
-                f.write(f"{data}\n")
+    session_id = session_manager.create_session(
+        session_id)  # Create a new session
+    try:
+        while True:
+            data = await websocket.receive_text()
+            session = session_manager.get_session(session_id)
+            # Assume `data` is JSON or a format you can process
+            if data == "END":
+                raise WebSocketDisconnect
+            if data.get("type") == "START":
+                # Extract channel labels
+                channel_labels = data.get("channel_labels")
+                session.add_channel_labels(channel_labels)
+                # Do something with the channel labels
+                continue
+            
+            if session:
+                session.add_eeg_data(data)
+    except WebSocketDisconnect:
+        # Handle disconnect
+        session = session_manager.end_session(session_id)
 
-    return
+

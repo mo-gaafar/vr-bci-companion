@@ -13,7 +13,7 @@ class ServerProcess(QThread):
         # run this once only
         # os.chdir("src")
         process = subprocess.Popen(
-            ["../.venv/bin/python", "-m", "uvicorn", "main:app"],
+            ["../.venv/bin/python", "-m", "uvicorn", "server.main:app"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, cwd="src"
         )

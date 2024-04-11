@@ -1,3 +1,5 @@
+from pydantic import AnyHttpUrl
+# import fastapi_asyncapi
 from os import path
 import uvicorn
 from pydantic import ValidationError
@@ -73,6 +75,8 @@ app.add_exception_handler(Exception, common_exception_handler)
 @app.get(f"{ROOT_PREFIX}/healthcheck")
 def healthcheck():
     return {"status": "ok"}
+
+
 
 
 @app.get("/docs", include_in_schema=False)
