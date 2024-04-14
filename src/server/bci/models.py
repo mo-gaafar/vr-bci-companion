@@ -29,13 +29,17 @@ class EEGMarker(BaseModel):
     timestamp: datetime
 
 
+class EEGChunk(BaseModel):
+    data: List[List]
+    timestamp: List
+
+
 class EEGData(BaseModel):
     session_id: str = Field(...,
                             description="The session ID of the EEG data session.")
     mode: EEGMode = Field(
         ..., description="The mode of EEG data recording, either calibration or classification.")
-    timestamp_epoch: datetime = Field(
-        ..., description="Timestamp of the EEG data point in epoch time.")
+    timestamps: List = Field( [], description="Timestamp of the EEG data point in epoch time.")
     channel_labels: List[str] = Field(...,
                                       description="Labels for each EEG channel.")
     data: List[List[float]] = Field(
@@ -58,7 +62,6 @@ class EEGData(BaseModel):
 
     class Config:
         use_enum_values = True
-
 
 
 class CalibrationInstruction(BaseModel):

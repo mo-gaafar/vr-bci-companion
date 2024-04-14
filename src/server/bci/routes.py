@@ -1,3 +1,5 @@
+from .models import EEGChunk
+import json
 from .service import session_manager  # import the session manager instance
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi import WebSocket
@@ -7,13 +9,28 @@ from .models import CalibrationStartResponse, ClassificationStartRequest, Classi
 bci = APIRouter(prefix="/bci", tags=["bci"])
 
 PLACEHOLDER_PROTOCOL = [
-    {"time": 3, "action": "Prepare"},
+    {"time": 10, "action": "Prepare"},
     {"time": 5, "action": "Start Imagining Walking"},
+    {"time": 5, "action": "Passive Movement"},
+    {"time": 5, "action": "Stop and Rest"},
+    {"time": 5, "action": "Start Imagining Walking"},
+    {"time": 5, "action": "Passive Movement"},
+    {"time": 5, "action": "Stop and Rest"},
+    {"time": 5, "action": "Start Imagining Walking"},
+    {"time": 5, "action": "Passive Movement"},
+    {"time": 5, "action": "Stop and Rest"},
+    {"time": 5, "action": "Start Imagining Walking"},
+    {"time": 5, "action": "Passive Movement"},
+    {"time": 5, "action": "Stop and Rest"},
+    {"time": 5, "action": "Start Imagining Walking"},
+    {"time": 5, "action": "Passive Movement"},
+    {"time": 5, "action": "Stop and Rest"},
+    {"time": 5, "action": "Start Imagining Walking"},
+    {"time": 5, "action": "Passive Movement"},
     {"time": 5, "action": "Stop and Rest"},
     {"time": 5, "action": "Start Imagining Walking"},
     {"time": 5, "action": "Stop and Rest"},
     {"time": 5, "action": "Repeat or End"},
-
 ]
 
 
@@ -72,21 +89,37 @@ async def bci_websocket(websocket: WebSocket, session_id: str = Path(..., descri
     try:
         while True:
             data = await websocket.receive_text()
+            print(f"Received data: {data}")
             session = session_manager.get_session(session_id)
             # Assume `data` is JSON or a format you can process
-            if data == "END":
+            data = json.loads(data)
+            if data.get("type") == "END":
                 raise WebSocketDisconnect
             if data.get("type") == "START":
                 # Extract channel labels
                 channel_labels = data.get("channel_labels")
-                session.add_channel_labels(channel_labels)
                 # Do something with the channel labels
+                session.add_channel_labels(channel_labels)
+                # send response to client
+                await websocket.send_text(f"Received channel labels: {channel_labels}")
+                await websocket.send_text("ACK")
                 continue
-            
             if session:
-                session.add_eeg_data(data)
-    except WebSocketDisconnect:
+                # data = json.loads(data)
+                # if 1D array, convert to 2D array
+                print(data)
+                data_chunk = EEGChunk(data=[data.get("data")], timestamp=[
+                                      data.get("timestamp")])
+                session.add_eeg_data(data_chunk)
+                # send response to client
+                await websocket.send_text(f"ACK_EEG {data.get('timestamp')}")
+                print(f"Received data: {data}")
+    except WebSocketDisconnect as e:
+        # if close code is 1000 (normal closure), do not raise exception
+        if e.code == 1000:
+            print("Session ended by client")
+        else:
+            print("Session ended unexpectedly")
         # Handle disconnect
-        session = session_manager.end_session(session_id)
-
-
+        session = session_manager.end_session(
+            session_id, normal_closure=(e.code == 1000))
