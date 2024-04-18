@@ -14,4 +14,3 @@ class ModelTrainingResponse(BaseModel):
     modelId: str = Field(...,
                          description="A unique identifier for the trained model")
 
-

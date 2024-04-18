@@ -13,6 +13,12 @@ from PyQt5.QtCore import pyqtSlot
 from gui.server_thread import init_server_process
 from gui.sig_plot import PlotThread
 
+
+# from PyQt5.QtCore import qRegisterMetaType
+# from PyQt5.QtNetwork import QAbstractSocket
+
+
+
 """local_ui.py - Main GUI for NeuroRehab Connect"""
 
 
@@ -101,6 +107,7 @@ def main():
     try:
         app = QApplication(sys.argv)
         gui = ServerControlGUI()
+
         gui.show()
         sys.exit(app.exec_())
     except Exception as e:

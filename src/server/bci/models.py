@@ -34,6 +34,22 @@ class EEGChunk(BaseModel):
     timestamp: List
 
 
+class ElectrodeCoordinate(BaseModel):
+    x: float = Field(..., description="X coordinate")
+    y: float = Field(..., description="Y coordinate")
+    z: float = Field(..., description="Z coordinate")
+
+
+class EEGSpecification(BaseModel):
+    """Specifications of the acquisition modalities"""
+    electrode_placement: Dict[str, ElectrodeCoordinate] = Field(
+        ..., description="Dictionary mapping electrode labels to their coordinates")
+    amplifier: str = Field(..., description="The EEG amplifier used.")
+    amplificatoin_gain: List[int] = Field(..., description="The amplification gain.")
+    sampling_rate: int = Field(..., description="The sampling rate in Hz.")
+    resolution: int = Field(..., description="The resolution in bits.")
+    filter_bandwidth: List[int] = Field(..., description="The filter bandwidth in Hz.")
+
 class EEGData(BaseModel):
     session_id: str = Field(...,
                             description="The session ID of the EEG data session.")

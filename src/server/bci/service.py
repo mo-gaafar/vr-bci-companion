@@ -1,4 +1,5 @@
-from .models import EEGData, EEGMode, EEGMarker, CueType, EEGChunk
+from dataclasses import dataclass, field
+from .models import EEGData, EEGMode, EEGMarker, CueType, EEGChunk, EEGSpecification
 from .models import EEGData, EEGMode, EEGMarker, CueType
 from typing import Optional
 from enum import Enum, auto
@@ -11,34 +12,23 @@ class SessionState(Enum):
     CLASSIFICATION = auto()
 
 
+@dataclass
 class BCISession:
-    def __init__(self, session_id=None):
-        if session_id is None:
-            self.session_id = uuid.uuid4()
-        else:
-            self.session_id = session_id
-        self.state = SessionState.CALIBRATION
-        self.eeg_data = []  # This will store EEG data
+    session_id: uuid.UUID = field(default_factory=uuid.uuid4)
+    state: SessionState = SessionState.CALIBRATION
+    eeg_data: list[EEGChunk] = field(default_factory=list)
 
-        self.calibration = EEGData(
-            session_id=str(self.session_id),
-            mode=EEGMode.CALIBRATION,
-            timestamps=[],
-            channel_labels=[],
-            data=[],
-            sampling_rate=0,
-            markers=[]
-        )
+    calibration: EEGData = field(default_factory=lambda: EEGData(
+        mode=EEGMode.CALIBRATION,
+        sampling_rate=0  # Set actual sampling rate when known
+    ))
 
-        self.classification = EEGData(
-            session_id=str(self.session_id),
-            mode=EEGMode.CLASSIFICATION,
-            timestamps=[],
-            channel_labels=[],
-            data=[],
-            sampling_rate=0,
-            markers=[]
-        )
+    classification: EEGData = field(default_factory=lambda: EEGData(
+        mode=EEGMode.CLASSIFICATION,
+        sampling_rate=0  # Set actual sampling rate when known
+    ))
+
+    specifications: EEGSpecification = field(default_factory=EEGSpecification)
 
     def add_eeg_data(self, data: EEGChunk):
         """Add EEG data to the session."""
@@ -113,8 +103,9 @@ class SessionManager:
         # print some session stats
         print(f"Session data length: {len(session.eeg_data)}")
         print(f"Session state: {session.state}")
-        print(
-            f"Session time range (Calibration): {session.calibration.timestamps[0]} - {session.calibration.timestamps[-1]}")
+        if len(session.calibration.timestamps) > 0:
+            print(
+                f"Session time range (Calibration): {session.calibration.timestamps[0]} - {session.calibration.timestamps[-1]}")
         return session
 
 
