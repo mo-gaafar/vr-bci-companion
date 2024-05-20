@@ -79,6 +79,21 @@ class Settings(BaseSettings):
         description="Production",
     )
 
+    AWS_S3_BUCKET: str = Field(
+        title="AWS S3 Bucket",
+        description="AWS S3 Bucket",
+    )
+    AWS_S3_ACCESS_KEY: str = Field(
+        title="AWS S3 Access Key",
+        description="AWS S3 Access Key",
+    )
+    AWS_S3_SECRET_KEY: str = Field(
+        title="AWS S3 Secret Key",
+        description="AWS S3 Secret Key",
+    )
+
+    
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

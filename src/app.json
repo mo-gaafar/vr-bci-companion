@@ -1,6 +1,6 @@
 {
-  "name": "Picnic Backend",
-  "description": "Backend server for picnic by illusionaire",
+  "name": "NeuroHike VR Backend",
+  "description": "Backend server for NeuroHike VR game", 
   "repository": "https://github.com/mo-gaafar/picnic-backend",
   "keywords": ["fastapi", "heroku"],
   "image": "heroku/python",

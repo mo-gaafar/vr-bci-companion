@@ -1,3 +1,5 @@
+import numpy as np
+import mne
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 import json
@@ -7,65 +9,86 @@ from server.database import MongoDB
 BCI_USE_MONGO = False
 
 
-class ISessionRepository(ABC):
-    '''Interface for saving session data to a repository.'''
-    @abstractmethod
-    def save_session(self, session_data: Dict[str, Any]) -> None:
-        pass
+class BCIRepo:
+    def __init__(self, timeseries_api_url):
+        self.timeseries_api_url = timeseries_api_url
+
+    def get_eeg_data(self, session_id, start_time=None, end_time=None):
+        # Fetch EEG data from timeseries API (replace with your actual implementation)
+        eeg_data = self.fetch_data_from_api(session_id, start_time, end_time)
+
+        # Extract magnitude and timestamp
+        data = np.array([[d['magnitude']]
+                        for d in eeg_data])  # Assuming single channel
+        timestamps = [d['epoch_timestamp'] for d in eeg_data]
+
+        # Create MNE Info object
+        info = mne.create_info(ch_names=['EEG'], sfreq=1, ch_types=[
+                               'eeg'])  # Adjust sfreq if needed
+
+        # Create MNE RawArray object
+        raw = mne.io.RawArray(data, info)
+        raw.set_meas_date(timestamps[0])  # Set measurement start time
+
+        return raw
 
 
-class IEEGDataRepository(ABC):
-    '''Interface for saving EEG data to a repository.'''
-    @abstractmethod
-    def save_eeg_data(self, session_id: str, eeg_data: Dict[str, Any]) -> None:
-        pass
+# class ISessionRepository(ABC):
+#     '''Interface for saving session data to a repository.'''
+#     @abstractmethod
+#     def save_session(self, session_data: Dict[str, Any]) -> None:
+#         pass
 
 
-class MongoDBSessionRepository(ISessionRepository):
-    def __init__(self):
-        self.db = MongoDB
-        self.collection = self.db['sessions']
-
-    def save_session(self, session_data: Dict[str, Any]) -> None:
-        self.collection.insert_one(session_data)
+# class IEEGDataRepository(ABC):
+#     '''Interface for saving EEG data to a repository.'''
+#     @abstractmethod
+#     def save_eeg_data(self, session_id: str, eeg_data: Dict[str, Any]) -> None:
+#         pass
 
 
-class MongoDBEEGDataRepository(IEEGDataRepository):
-    def __init__(self):
-        self.db = MongoDB
-        self.collection = self.db['eeg_data']
+# class MongoDBSessionRepository(ISessionRepository):
+#     def __init__(self):
+#         self.db = MongoDB
+#         self.collection = self.db['sessions']
 
-    def save_eeg_data(self, session_id: str, eeg_data: Dict[str, Any]) -> None:
-        eeg_data['session_id'] = session_id
-        self.collection.insert_one(eeg_data)
-
-
-class LocalFileSessionRepository(ISessionRepository):
-    def __init__(self, base_path: str = "./data/sessions/"):
-        self.base_path = base_path
-
-    def save_session(self, session_data: Dict[str, Any]) -> None:
-        with open(f"{self.base_path}{session_data['id']}.json", 'w') as file:
-            json.dump(session_data, file)
+#     def save_session(self, session_data: Dict[str, Any]) -> None:
+#         self.collection.insert_one(session_data)
 
 
-class LocalFileEEGDataRepository(IEEGDataRepository):
-    def __init__(self, base_path: str = "./data/eeg_data/"):
-        self.base_path = base_path
+# class MongoDBEEGDataRepository(IEEGDataRepository):
+#     def __init__(self):
+#         self.db = MongoDB
+#         self.collection = self.db['eeg_data']
 
-    def save_eeg_data(self, session_id: str, eeg_data: Dict[str, Any]) -> None:
-        with open(f"{self.base_path}{session_id}.json", 'a') as file:
-            json.dump(eeg_data, file)
-            file.write('\n')
-
-
-
-# Choose the repository based on configuration
-if BCI_USE_MONGO:
-    session_repo = MongoDBSessionRepository()
-    eeg_data_repo = MongoDBEEGDataRepository()
-else:
-    session_repo = LocalFileSessionRepository()
-    eeg_data_repo = LocalFileEEGDataRepository()
+#     def save_eeg_data(self, session_id: str, eeg_data: Dict[str, Any]) -> None:
+#         eeg_data['session_id'] = session_id
+#         self.collection.insert_one(eeg_data)
 
 
+# class LocalFileSessionRepository(ISessionRepository):
+#     def __init__(self, base_path: str = "./data/sessions/"):
+#         self.base_path = base_path
+
+#     def save_session(self, session_data: Dict[str, Any]) -> None:
+#         with open(f"{self.base_path}{session_data['id']}.json", 'w') as file:
+#             json.dump(session_data, file)
+
+
+# class LocalFileEEGDataRepository(IEEGDataRepository):
+#     def __init__(self, base_path: str = "./data/eeg_data/"):
+#         self.base_path = base_path
+
+#     def save_eeg_data(self, session_id: str, eeg_data: Dict[str, Any]) -> None:
+#         with open(f"{self.base_path}{session_id}.json", 'a') as file:
+#             json.dump(eeg_data, file)
+#             file.write('\n')
+
+
+# # Choose the repository based on configuration
+# if BCI_USE_MONGO:
+#     session_repo = MongoDBSessionRepository()
+#     eeg_data_repo = MongoDBEEGDataRepository()
+# else:
+#     session_repo = LocalFileSessionRepository()
+#     eeg_data_repo = LocalFileEEGDataRepository()

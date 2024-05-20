@@ -1,3 +1,8 @@
+import pickle
+from fastapi import Depends
+from pymongo import ASCENDING
+from pymongo.database import Database
+from common.repo.timeseries import StorageType, get_mongo_db
 from .models import EEGChunk
 import json
 from .service import session_manager  # import the session manager instance
@@ -123,3 +128,40 @@ async def bci_websocket(websocket: WebSocket, session_id: str = Path(..., descri
         # Handle disconnect
         session = session_manager.end_session(
             session_id, normal_closure=(e.code == 1000))
+
+# Endpoint for retrieving EEG data
+
+
+@bci.get("/eeg_data/")
+async def get_eeg_data(
+    session_id: str,
+    storage_type: StorageType,
+    start_time: int = None,
+    end_time: int = None,
+    db: Database = Depends(get_mongo_db)
+):
+    if storage_type == StorageType.MONGODB:
+        query = {"metadata.session_id": session_id}
+        if start_time:
+            query["epoch_timestamp"] = {"$gte": start_time}
+        if end_time:
+            query["epoch_timestamp"]["$lte"] = end_time
+
+        cursor = db["eeg_data_time_series"].find(
+            query).sort("epoch_timestamp", ASCENDING)
+        return [{"magnitude": doc["magnitude"], "epoch_timestamp": doc["epoch_timestamp"]} for doc in cursor]
+
+    elif storage_type == StorageType.LOCAL_FILE:
+        filename = f"eeg_data_{session_id}.pkl" if session_id else "eeg_data.pkl"
+        try:
+            with open(filename, "rb") as f:
+                all_data = []
+                while True:
+                    try:
+                        all_data.extend(pickle.load(f))
+                    except EOFError:
+                        break
+            return all_data
+        except FileNotFoundError:
+            raise HTTPException(
+                status_code=404, detail=f"File not found: {filename}")
