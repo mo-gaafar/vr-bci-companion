@@ -15,7 +15,7 @@ jobs:
           python-version: "3.9" # Use your Python version
 
       - name: Install dependencies
-        run: pip install -r src/requirements.txt # Adjust if needed
+        run: pip install -r requirements-test.txt # Adjust if needed
 
       - name: Run tests
         run: pytest tests/ # Run tests in the tests directory
