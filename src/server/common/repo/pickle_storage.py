@@ -7,11 +7,10 @@ from typing import Any
 import pickle
 
 from fastapi import HTTPException
-from s3 import S3Repo
 # Configuration
 
-from config import CONFIG
-
+from server.config import CONFIG
+from server.common.repo.s3 import S3Repo
 # File Storage Interface (Optional, but good for abstraction)
 
 
@@ -26,16 +25,24 @@ class FileStorage:
 
 
 class LocalPickleStorage(FileStorage):
-    def save(self, data: Any, path: str, config=CONFIG) -> None:
-        with open(path, "wb") as file:
+    def __init__(self):
+        self.cache_dir = Path(__file__).parent.parent.parent / "temp"
+        self.cache_dir.mkdir(exist_ok=True)
+
+    def save(self, data: Any, path: str) -> None:
+        full_path = self.cache_dir / path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(full_path, "wb") as file:
             pickle.dump(data, file)
 
     def load(self, path: str) -> Any:
-        with open(path, "rb") as file:
+        full_path = self.cache_dir / path
+        with open(full_path, "rb") as file:
             return pickle.load(file)
 
-
 # S3 Pickle Storage with Caching (Uses S3Repo)
+
+
 class S3PickleStorage(FileStorage):
     def __init__(self, config=CONFIG):
         self.s3_repo = S3Repo(config)

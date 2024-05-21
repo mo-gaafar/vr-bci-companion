@@ -1,10 +1,11 @@
 import os
 import tempfile
+import shutil  # Import shutil for cross-platform file operations
 import boto3
 from pathlib import Path
 from functools import lru_cache
 from fastapi import HTTPException
-
+import hashlib
 from server.config import CONFIG
 
 
@@ -31,35 +32,39 @@ class S3Repo:
             self.s3.upload_file(file_path, self.config.AWS_S3_BUCKET, key)
         except boto3.exceptions.S3UploadFailedError as e:
             raise HTTPException(
-                status_code=500, detail=f"S3 upload failed: {e}")
+                status_code=500, detail=f"R2 upload failed: {e}")
 
     def download_file(self, key: str, file_path: str):
         cached_path = self.get_cached_path(key)
         if cached_path.exists():
-            # Check ETag in S3 to see if the file has changed
+            # Check ETag in R2 to see if the file has changed
             try:
-                s3_etag = self.s3.head_object(
+                r2_etag = self.s3.head_object(
                     Bucket=self.config.AWS_S3_BUCKET, Key=key
                 )["ETag"][1:-1]
             except boto3.exceptions.ClientError as e:
                 raise HTTPException(
-                    status_code=404, detail=f"File not found: {e}")
-            with open(cached_path, "rb") as f:
-                local_etag = boto3.utils.compute_md5(
-                    f, size=1024 * 1024)["ETag"][1:-1]
+                    status_code=404, detail=f"File not found in R2: {e}")
 
-            if s3_etag == local_etag:  # File hasn't changed, use cached version
-                os.replace(cached_path, file_path)
+            hash_md5 = hashlib.md5()
+            with open(cached_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            local_etag = hash_md5.hexdigest()
+
+            if r2_etag == local_etag:
+                shutil.copy2(cached_path, file_path)  # Copy with metadata
                 return
 
-        # If not cached or ETags don't match, download from S3
+        # If not cached or ETags don't match, download from R2
         try:
             self.s3.download_file(
                 self.config.AWS_S3_BUCKET, key, str(cached_path)
             )
-            os.replace(cached_path, file_path)
+            shutil.copy2(cached_path, file_path)  # Copy with metadata
         except boto3.exceptions.S3DownloadFailedError as e:
-            raise HTTPException(status_code=404, detail=f"File not found: {e}")
+            raise HTTPException(
+                status_code=404, detail=f"File not found in R2: {e}")
 
     def delete_file(self, key: str):
         try:
@@ -69,4 +74,4 @@ class S3Repo:
                 os.remove(cached_path)
         except boto3.exceptions.S3DeleteFailedError as e:
             raise HTTPException(
-                status_code=500, detail=f"S3 delete failed: {e}")
+                status_code=500, detail=f"R2 delete failed: {e}")
