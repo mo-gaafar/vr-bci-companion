@@ -12,10 +12,10 @@ from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html, get_swagge
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .config import CONFIG, ROOT_PREFIX, VERSION
-from .api import api_router
-from .handlers import validation_exception_handler, http_exception_handler, repository_exception_handler, common_exception_handler
-from .common.exceptions import RepositoryException
+from config import CONFIG, ROOT_PREFIX, VERSION
+from api import api_router
+from handlers import validation_exception_handler, http_exception_handler, repository_exception_handler, common_exception_handler
+from server.common.exceptions import RepositoryException
 
 tags_metadata = [
     {
