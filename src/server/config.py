@@ -79,7 +79,11 @@ class Settings(BaseSettings):
         title="Production",
         description="Production",
     )
-
+    AWS_S3_ENDPOINT: str = Field(
+        default="https://d2629ec77e4a3e3962b0ce15f11a1576.r2.cloudflarestorage.com",
+        title="AWS S3 Endpoint",
+        description="AWS S3 Endpoint",
+    )
     AWS_S3_BUCKET: str = Field(
         title="AWS S3 Bucket",
         description="AWS S3 Bucket",

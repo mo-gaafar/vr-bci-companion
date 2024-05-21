@@ -5,14 +5,15 @@ from pathlib import Path
 from functools import lru_cache
 from fastapi import HTTPException
 
-from config import CONFIG
+from server.config import CONFIG
 
 
 class S3Repo:
     def __init__(self, config=CONFIG):
         self.config = config
         self.s3 = boto3.client(
-            "s3",
+            service_name="s3",
+            endpoint_url=config.AWS_S3_ENDPOINT,
             aws_access_key_id=config.AWS_S3_ACCESS_KEY,
             aws_secret_access_key=config.AWS_S3_SECRET_KEY,
         )
