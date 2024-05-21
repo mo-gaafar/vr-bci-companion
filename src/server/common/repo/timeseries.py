@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pymongo import MongoClient, ASCENDING
 from pymongo.database import Database
-from config import CONFIG
+from server.config import CONFIG
 from enum import Enum
 import pickle
 
@@ -62,4 +62,3 @@ async def append_eeg_data(
         except Exception as e:
             raise HTTPException(
                 status_code=500, detail=f"Error appending data to file: {e}")
-

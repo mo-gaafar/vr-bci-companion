@@ -2,7 +2,7 @@ import pickle
 from fastapi import Depends
 from pymongo import ASCENDING
 from pymongo.database import Database
-from common.repo.timeseries import StorageType, get_mongo_db
+from server.common.repo.timeseries import StorageType, get_mongo_db
 from .models import EEGChunk
 import json
 from .service import session_manager  # import the session manager instance

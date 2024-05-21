@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import dotenv_values
@@ -92,13 +93,12 @@ class Settings(BaseSettings):
         description="AWS S3 Secret Key",
     )
 
-    
-
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         # extra inputs permitted
         extra = "allow"
+
 
 
 CONFIG = Settings()
