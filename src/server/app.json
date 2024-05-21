@@ -9,7 +9,7 @@
     "WEB_CONCURRENCY": "1"
   },
   "scripts": {
-    "postdeploy": "uvicorn server.main:app --port=5000"
+    "postdeploy": "uvicorn main:app --port=5000"
   },
   "stack": "container"
 }
