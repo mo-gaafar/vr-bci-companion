@@ -41,8 +41,6 @@ class LocalPickleStorage(FileStorage):
             return pickle.load(file)
 
 # S3 Pickle Storage with Caching (Uses S3Repo)
-
-
 class S3PickleStorage(FileStorage):
     def __init__(self, config=CONFIG):
         self.s3_repo = S3Repo(config)
