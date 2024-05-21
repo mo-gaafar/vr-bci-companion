@@ -76,7 +76,7 @@ html_content = """
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Backend Server Home</title>
-  <link rel="icon" type="image/x-icon" href="gear_icon.ico">  
+  <link rel="icon" type="image/x-icon" href="favicon.ico">  
   <style>
     body {
       font-family: sans-serif;

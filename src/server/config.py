@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     )
 
     APP_NAME: str = Field(
-        default="VR BCI Game Server",
+        default="NeuroHike VR Backend",
         title="App name",
         description="App name",
         type="string",
@@ -98,7 +98,6 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
         # extra inputs permitted
         extra = "allow"
-
 
 
 CONFIG = Settings()

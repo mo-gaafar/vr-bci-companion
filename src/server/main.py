@@ -1,3 +1,4 @@
+from fastapi.responses import FileResponse
 from pydantic import AnyHttpUrl
 # import fastapi_asyncapi
 from os import path
@@ -38,7 +39,7 @@ tags_metadata = [
 
 
 app = FastAPI(docs_url=None, redoc_url=None, version=VERSION,
-              description="<h2> This is the backend for the virtual reality post-stroke rehabilitation game.</h2> <br> <br> The API is built using FastAPI and MongoDB, Hosted on Heroku. <br> API documentation is built automatically using Swagger and ReDoc. <br> <br> Built in Cairo University, Egypt", title=CONFIG.APP_NAME, favicon="static/favicon.ico", openapi_tags=tags_metadata)
+              description="<h2> This is the backend for the virtual reality post-stroke rehabilitation game.</h2> <br> <br> The API is built using FastAPI and MongoDB, Hosted on Heroku. <br> API documentation is built automatically using Swagger and ReDoc. <br> <br> Built in Cairo University, Egypt", title=CONFIG.APP_NAME, favicon="favicon.ico", openapi_tags=tags_metadata)
 
 origins = ['*']
 app.openapi_version = "3.0.2"  # Or a different OpenAPI 3.0.x version
@@ -82,10 +83,16 @@ def custom_swagger_ui_html():
     return get_swagger_ui_html(
         openapi_url=app.openapi_url,  # type: ignore
         title=app.title + " - Swagger UI",
+        swagger_favicon_url="/favicon.ico",
         oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
         swagger_js_url=STATIC_DIR+"/swagger-ui-bundle.js",
         swagger_css_url=STATIC_DIR+"/swagger-ui.css",
     )
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse("server/static/favicon.ico")
 
 
 @app.get("/detailed-guide", tags=["usage guide"])

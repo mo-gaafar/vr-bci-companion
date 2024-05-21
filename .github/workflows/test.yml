@@ -1,0 +1,22 @@
+name: Test FastAPI
+
+on: [push] # Trigger tests on every push (adjust as needed)
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9.6" # Use your Python version
+
+      - name: Install dependencies
+        run: pip install -r src/server/requirements.txt # Adjust if needed
+
+      - name: Run tests
+        run: pytest tests/ # Run tests in the tests directory
+
