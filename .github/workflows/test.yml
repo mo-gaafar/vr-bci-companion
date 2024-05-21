@@ -5,16 +5,7 @@ on: [push] # Trigger tests on every push (adjust as needed)
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      MONGO_URI: ${{ secrets.MONGO_URI }}
-      ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
-      MONGO_DB: ${{ secrets.MONGO_DB }}
-      MONGO_DB_TEST: ${{ secrets.MONGO_DB_TEST }}
-      AWS_S3_ENDPOINT: ${{ secrets.AWS_S3_ENDPOINT }}
-      AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-      AWS_S3_ACCESS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
-      AWS_S3_SECRET_KEY: ${{ secrets.AWS_S3_SECRET_KEY }}
-
+    environment: vr-bci-rehab
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
