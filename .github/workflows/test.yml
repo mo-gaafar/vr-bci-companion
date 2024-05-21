@@ -16,17 +16,18 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements-test.txt # Adjust if needed
-        
+
       - name: Set environment variables
-        run: |
-          echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
-          echo "ADMIN_PASS=${{ secrets.ADMIN_PASS }}" >> $GITHUB_ENV
-          echo "MONGO_DB=${{ secrets.MONGO_DB }}" >> $GITHUB_ENV
-          echo "MONGO_DB_TEST=${{ secrets.MONGO_DB_TEST }}" >> $GITHUB_ENV
-          echo "AWS_S3_ENDPOINT=${{ secrets.AWS_S3_ENDPOINT }}"
-          echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> $GITHUB_ENV
-          echo "AWS_S3_ACCESS_KEY=${{ secrets.AWS_S3_ACCESS_KEY }}" >> $GITHUB_ENV
-          echo "AWS_S3_SECRET_KEY=${{ secrets.AWS_S3_SECRET_KEY }}" >> $GITHUB_ENV
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+          MONGO_DB: ${{ secrets.MONGO_DB }}
+          MONGO_DB_TEST: ${{ secrets.MONGO_DB_TEST }}
+          PRODUCTION: ${{ secrets.PRODUCTION }}
+          AWS_S3_ENDPOINT: ${{ secrets.AWS_S3_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_S3_ACCESS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
+          AWS_S3_SECRET_KEY: ${{ secrets.AWS_S3_SECRET_KEY }}
 
       - name: Run tests
         run: pytest tests/ # Run tests in the tests directory
