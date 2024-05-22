@@ -42,22 +42,25 @@ class ElectrodeCoordinate(BaseModel):
 
 class EEGSpecification(BaseModel):
     """Specifications of the acquisition modalities"""
+    channel_labels: List[str] = []
     electrode_placement: Dict[str, ElectrodeCoordinate] = Field(
         ..., description="Dictionary mapping electrode labels to their coordinates")
     amplifier: str = Field(..., description="The EEG amplifier used.")
-    amplificatoin_gain: List[int] = Field(..., description="The amplification gain.")
+    amplificatoin_gain: List[int] = Field(...,
+                                          description="The amplification gain.")
     sampling_rate: int = Field(..., description="The sampling rate in Hz.")
     resolution: int = Field(..., description="The resolution in bits.")
-    filter_bandwidth: List[int] = Field(..., description="The filter bandwidth in Hz.")
+    filter_bandwidth: List[int] = Field(...,
+                                        description="The filter bandwidth in Hz.")
+
 
 class EEGData(BaseModel):
     session_id: str = Field(...,
                             description="The session ID of the EEG data session.")
     mode: EEGMode = Field(
         ..., description="The mode of EEG data recording, either calibration or classification.")
-    timestamps: List = Field( [], description="Timestamp of the EEG data point in epoch time.")
-    channel_labels: List[str] = Field(...,
-                                      description="Labels for each EEG channel.")
+    timestamps: List = Field(
+        [], description="Timestamp of the EEG data point in epoch time.")
     data: List[List[float]] = Field(
         ..., description="Nested list of EEG data points, where each inner list corresponds to a channel and contains data points for that channel.")
     sampling_rate: int = Field(...,
