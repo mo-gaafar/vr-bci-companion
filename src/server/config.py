@@ -97,6 +97,16 @@ class Settings(BaseSettings):
         description="AWS S3 Secret Key",
     )
 
+    POSTMARK_API_KEY: str = Field(
+        title="Postmark API Key",
+        description="Postmark API Key",
+    )
+
+    POSTMARK_SENDER_EMAIL: str = Field(
+        title="Postmark Sender Email",
+        description="Postmark Sender Email",
+    )
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

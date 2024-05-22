@@ -17,6 +17,7 @@ class BCISession:
     session_id: uuid.UUID = field(default_factory=uuid.uuid4)
     state: SessionState = SessionState.CALIBRATION
     eeg_data: list[EEGChunk] = field(default_factory=list)
+    classification_model: Optional[object] = None
 
     calibration: EEGData = field(default_factory=lambda: EEGData(
         mode=EEGMode.CALIBRATION,
