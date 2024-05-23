@@ -1,9 +1,51 @@
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
-from enum import Enum
+from enum import Enum, auto
+
+
+class ConnectionStatus(str, Enum):
+    CONNECTED = "Connected"
+    DISCONNECTED = "Disconnected"
+    RECONNECTING = "Reconnecting"
+    ERROR = "Error"
+    TIMEOUT = "Timeout"
+
+
+class CalibrationAction(BaseModel):
+    """Protocol for the calibration session"""
+    time: int = Field(...,
+                      description="Time in seconds when the instruction should be displayed")
+    action: str = Field(...,
+                        description="The specific action or instruction for the user")
+
+
+class CalibrationSet(BaseModel):
+
+    repeat: int = Field(...,
+                        description="Number of times to repeat the action set")
+    actions: List[CalibrationAction] = Field(...,
+                                             description="List of calibration actions")
+
+
+class CalibrationProtocol(BaseModel):
+    """Protocol for the calibration session"""
+    prepare: CalibrationSet = Field(...,
+                                    description="Prepare the user for the calibration session")
+    main_trial: CalibrationSet = Field(...,
+                                       description="Main trial of the calibration session")
+    end: CalibrationSet = Field(...,
+                                description="End the calibration session")
+
+
+class SessionState(str, Enum):
+    UNSTARTED = "Unstarted"
+    CALIBRATION = "Calibration"
+    TRAINING = "Training"
+    CLASSIFICATION = "Classification"
+    CLOSED = "Closed"
 
 
 class LSLPacket(BaseModel):
@@ -31,7 +73,7 @@ class EEGMarker(BaseModel):
 
 class EEGChunk(BaseModel):
     data: List[List]
-    timestamp: List
+    timestamps: List
 
 
 class ElectrodeCoordinate(BaseModel):
@@ -68,7 +110,7 @@ class EEGData(BaseModel):
     markers: Optional[List[EEGMarker]] = Field(
         default=None, description="Optional markers associated with the EEG data.")
 
-    @validator('data')
+    @field_validator('data')
     def validate_data(cls, v, values, **kwargs):
         mode = values.get('mode')
         if mode == EEGMode.CALIBRATION:
@@ -83,18 +125,11 @@ class EEGData(BaseModel):
         use_enum_values = True
 
 
-class CalibrationInstruction(BaseModel):
-    time: int = Field(...,
-                      description="Time in seconds when the instruction should be displayed")
-    action: CueType = Field(...,
-                            description="The specific action or instruction for the user")
-
-
 class CalibrationStartResponse(BaseModel):
     message: str
     sessionId: str = Field(...,
                            description="A unique identifier for the calibration session")
-    protocol: List[CalibrationInstruction]
+    protocol: List[CalibrationProtocol]
     start_time: str = Field(...,
                             description="ISO8601 timestamp of the calibration session start time")
 

@@ -1,6 +1,6 @@
 from bson import ObjectId
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr, validator
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional, List, Annotated
 from enum import Enum
 
@@ -33,7 +33,7 @@ class BaseUser(MongoBaseModel):
     role: RoleEnum = Field(RoleEnum.guest)
 
     # validate if either email or phone is provided
-    @validator("email")
+    @field_validator("email")
     def email_or_phone_required(cls, v, values, **kwargs):
         if v is None and values.get("phone") is None:
             raise ValueError("Either email or phone must be provided")

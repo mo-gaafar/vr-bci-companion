@@ -1,28 +1,31 @@
 from dataclasses import dataclass, field
-from .models import EEGData, EEGMode, EEGMarker, CueType, EEGChunk, EEGSpecification
-from .models import EEGData, EEGMode, EEGMarker, CueType
+from .models import (EEGData,
+                     EEGMode,
+                     EEGMarker,
+                     CueType,
+                     EEGChunk,
+                     EEGSpecification,
+                     SessionState,
+                     ConnectionStatus)
 from typing import Optional
-from enum import Enum, auto
 import uuid
 
-
-class SessionState(Enum):
-    CALIBRATION = auto()
-    TRAINING = auto()
-    CLASSIFICATION = auto()
+import mne
 
 
-@dataclass
+@ dataclass
 class BCISession:
     # Fields without default values first
-    session_id: uuid.UUID = field(default_factory=uuid.uuid4)
+    session_id: uuid.UUID
     calibration: Optional[EEGData] = None
     classification: Optional[EEGData] = None
-    specifications: Optional[EEGSpecification] = None
-
+    info: Optional[mne.Info] = None
     # Fields with default values next
-    state: SessionState = SessionState.CALIBRATION
-    eeg_data: list[EEGChunk] = field(default_factory=list)
+    state: SessionState = SessionState.UNSTARTED
+    connection_status: ConnectionStatus = ConnectionStatus.DISCONNECTED
+    eeg_buffer: list[EEGChunk] = field(default_factory=list)
+    last_recieved_timestamp: float = 0
+    last_processed_timestamp: float = 0
     classification_model: Optional[object] = None
 
     def init_calibration(self):
@@ -70,9 +73,18 @@ class BCISession:
         # the model will be stored in the datalake as a pickle file
         pass
 
+    def add_chunk_to_buffer(self, data: EEGChunk):
+        """Add EEG data to the session buffer."""
+        # TODO: add some buffer size limit logic and deque logic
+        # chunk flattening logic with check for coherence
+        # duplicate timestamp check?
+        # sample rate uniformity check?
+
+        self.eeg_buffer.append(data)
+
     def add_eeg_data(self, data: EEGChunk):
         """Add EEG data to the session. This will keep getting called as long as the session is active."""
-        self.eeg_data.append(data)
+        self.add_chunk_to_buffer(data)
         # Depending on the current state, handle the data differently
         if self.state == SessionState.CALIBRATION:
             self.handle_calibration(data)
@@ -97,6 +109,11 @@ class BCISession:
             self.calibration.data.append(sample)
             self.calibration.timestamps.append(timestamp)
         # Implement calibration logic here
+        # check for completion of protocol by calculating the time elapsed
+        # note that the time elapsed is based on the received timestamps
+        # if the time elapsed is greater than the protocol time then stop the calibration
+        # and end calibration
+
         pass
 
     def output_session_summary(self):
@@ -109,7 +126,9 @@ class BCISession:
 
     def handle_training(self, data):
         """Handle training data."""
-        # Implement model training logic here
+        # Implement model training status checker here
+        # if status is done then change the state to classification
+
         pass
 
     def handle_classification(self, data: EEGChunk):
@@ -136,20 +155,48 @@ class BCISession:
         """Set the session state."""
         self.state = new_state
 
+    def get_session_stats(self):
+        calibration_data_len = len(
+            self.calibration.data) if self.calibration else 0
+        classification_data_len = len(
+            self.classification.data) if self.classification else 0
+        eeg_buffer_len = len(self.eeg_buffer) if self.eeg_buffer else 0
+        return {
+            "session_id": self.session_id,
+            "state": str(self.state),
+            "channels": dict(self.info.ch_names if self.info else None),
+            "calibration_data": calibration_data_len,
+            "classification_data": classification_data_len,
+            "eeg_buffer_data": eeg_buffer_len
+        }
+
+    def __dict__(self):
+        return {
+            "session_id": self.session_id,
+            "state": str(self.state),
+            "channels": dict(self.info.ch_names if self.info else None),
+        }
+
 
 class SessionManager:
     def __init__(self):
-        self.sessions = {}
+        self.sessions = []
 
     def create_session(self, session_id) -> uuid.UUID:
         """Create a new BCI session and return its ID."""
         new_session = BCISession(session_id=session_id)
-        self.sessions[new_session.session_id] = new_session
-        return new_session.session_id
+        # check if session already exists in memory
+        if session_id in self.sessions:
+            raise Exception("Session already exists.")
+        self.sessions.append(new_session)
+        return new_session
 
     def get_session(self, session_id: uuid.UUID) -> Optional[BCISession]:
         """Retrieve an existing BCI session by its ID."""
-        return self.sessions.get(session_id)
+        for session in self.sessions:
+            if str(session.session_id) == str(session_id):
+                return session
+        return None
 
     def end_session(self, session_id: uuid.UUID, normal_closure: bool = True):
         """End a session and return the session object."""
@@ -157,12 +204,8 @@ class SessionManager:
         session = self.get_session(session_id)
         # TODO: add session closing here
         print(f"Session {session_id} ended.")
-        # print some session stats
-        print(f"Session data length: {len(session.eeg_data)}")
-        print(f"Session state: {session.state}")
-        if len(session.calibration.timestamps) > 0:
-            print(
-                f"Session time range (Calibration): {session.calibration.timestamps[0]} - {session.calibration.timestamps[-1]}")
+        # print session stats dict
+        print(session.get_session_stats())
         return session
 
 

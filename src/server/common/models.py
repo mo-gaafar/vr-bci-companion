@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, ValidationError, Json
 from bson.objectid import ObjectId
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from bson import ObjectId
 # from bson.errors import InvalidId
 from datetime import datetime
@@ -106,7 +106,7 @@ class CommonModel(BaseModel):
             datetime: lambda dt: dt.isoformat() + "Z"
         }
 
-    # @validator('phone', check_fields=False)
+    # @field_validator('phone', check_fields=False)
     # def validate_egyptian_phone_number(cls, phone):
     #     # Validate the phone number format
     #     if not phone.startswith('01') or len(phone) != 11:
@@ -130,7 +130,7 @@ class MongoBaseModel(CommonModel):
     id: Optional[Annotated[ObjectId, ObjectIdPydanticAnnotation]
                  ] = Field(None, alias="_id")
 
-    # @validator('id')
+    # @field_validator('id')
     # def validate_object_id(cls, v):
     #     if not ObjectId.is_valid(v):
     #         raise ValueError('Invalid ObjectId')
@@ -157,7 +157,7 @@ class PaginationOut(BaseModel):
     total: int
     total_pages: int = 0
 
-    @validator('total_pages', pre=True, always=True)
+    @field_validator('total_pages')
     def calculate_total_pages(cls, v, values):
         if values['num_items'] == 0:
             return 0  # Avoid division by zero
