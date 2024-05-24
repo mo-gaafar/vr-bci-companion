@@ -19,12 +19,13 @@ router = APIRouter(prefix="/patient")
 def get_patient_repo():
     return PatientRepository()
 
+
 @router.post("/signup", response_model=PatientOut, status_code=status.HTTP_201_CREATED)
 async def signup(patient: PatientSignup, repo: PatientRepository = Depends(get_patient_repo)):
     # creates a new auth user and then creates a new patient
     from .service import patient_signup
     # try:
-    patient =  patient_signup(patient, repo)
+    patient = patient_signup(patient, repo)
     return patient
     # except Exception as e:
     # raise HTTPException(

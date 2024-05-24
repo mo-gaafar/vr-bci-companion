@@ -2,7 +2,6 @@
 
 # Path: tests/patient_test.py
 
-from fastapi.testclient import TestClient
 import pytest
 from server.config import ROOT_PREFIX
 from datetime import datetime
@@ -10,8 +9,6 @@ from datetime import datetime
 
 @pytest.mark.usefixtures("testapp")
 def test_signup(testapp):
-    from server.patient.models import PatientSignup
-    from tests.conftest import clear_test_db
     data = {
         "username": "string",
         "password": "string",

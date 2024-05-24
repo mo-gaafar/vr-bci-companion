@@ -8,7 +8,7 @@ from server.database import MongoDB
 
 
 class PatientRepository:
-    def __init__(self, db_client: pymongo.MongoClient):
+    def __init__(self):
         self.db = MongoDB
         self.patient_collection = self.db.patients
         self.exercise_record_collection = self.db.exercise_records
