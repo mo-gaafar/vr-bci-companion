@@ -114,12 +114,12 @@ def generate_otp_for_headset(
     """
 
     # 1. Generate OTP
-    from common.util.security import generate_pairing_code
+    from server.common.util.security import generate_pairing_code
     generation_time = datetime.now(timezone.utc)
     otp_code = generate_pairing_code(
         generation_timestamp=generation_time, device_id=headset_id)
     # 2. store it in the database
-    from auth.repo import create_pairing_code
+    from server.auth.repo import create_pairing_code
     record = create_pairing_code(user_id=None, device_id=headset_id,
                                  code=otp_code, generation_time=generation_time, expiration=generation_time + timedelta(minutes=5))
     # 3. Return the OTP and its expiry time
@@ -142,10 +142,10 @@ def enter_otp_for_headset(
     """
     try:
         # 1. check if the user is authenticated
-        from common.util.security import access_check
+        from server.common.util.security import access_check
         access_check(auth_user, ["admin", "patient"])
         # 2. Check if the OTP is valid
-        from auth.repo import get_pairing_code, pair_user_to_device, validate_pairing
+        from server.auth.repo import get_pairing_code, pair_user_to_device, validate_pairing
         otp = body.get("code")
         if otp is None:
             raise HTTPException(422, "Wrong body format")
@@ -168,7 +168,7 @@ def headset_obtain_token(headset_id: str, otp: str):
     """ Obtain token for the headset to use for authentication.
     Note that this can be done only once for a given OTP.
     You should use the usual refresh token endpoint to renew the token."""
-    from auth.service import get_user_from_pairing
+    from server.auth.service import get_user_from_pairing
     try:
         user = get_user_from_pairing(headset_id, otp)
         return generate_tokens(user)

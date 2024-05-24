@@ -17,9 +17,7 @@ router = APIRouter(prefix="/patient")
 
 
 def get_patient_repo():
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    yield PatientRepository(client)
-
+    return PatientRepository()
 
 @router.post("/signup", response_model=PatientOut, status_code=status.HTTP_201_CREATED)
 async def signup(patient: PatientSignup, repo: PatientRepository = Depends(get_patient_repo)):

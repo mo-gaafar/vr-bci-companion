@@ -43,7 +43,8 @@ def start_calibration(session_id: str = Path(..., description="The session ID of
 
 @bci.get("/classification/start/{session_id}", response_model=ClassificationStartResponse)
 def start_classification(request: ClassificationStartRequest):
-    # Start a classification session using the specified model
+    # Start the classification mode and return the response
+    
     return ClassificationStartResponse(...)
 
 

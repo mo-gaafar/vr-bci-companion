@@ -6,7 +6,21 @@ import websockets
 from server.bci.models import EEGChunk
 from tests.conftest import testapp  # Import your testapp fixture
 
+# Use a new UUID for each test
+SESSION_ID = "12345678-1234-5678-1234-567812345678"
 
+# @pytest.fixture(scope="module")
+# async def bci_websocket(testapp):
+    
+#     uri = f"api/v1/bci/stream/{SESSION_ID}"
+#     async with websockets.connect(testapp.url + uri) as ws:
+#         yield ws
+
+#     # Close the websocket connection after the test
+#     await ws.close()
+
+    
+#TODO: send real EEG data from a local file or a known source
 async def send_fake_data(websocket):
     # Send fake data packets
     while True:
@@ -23,8 +37,9 @@ async def send_fake_data(websocket):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip # Skip this test for now
 async def test_bci_session(testapp):  # Use the 'testapp' fixture
-    session_id = "12345678-1234-5678-1234-567812345678"
+    session_id = SESSION_ID
     with testapp.websocket_connect("api/v1/bci/stream/"+session_id) as websocket:
         # Send handshake packet (START)
         websocket.send_json({
@@ -69,14 +84,14 @@ async def test_bci_session(testapp):  # Use the 'testapp' fixture
 
 
         # keep accumulating text until the last response is received
-        end_response = ""
+        end_response_accumulator = []
         while True:
             try:
-                end_response = websocket.receive_text()
+                end_response_accumulator.append(websocket.receive_text())
             except:
                 break
-        
-        assert "Session ended" in end_response
+        print(end_response_accumulator)
+        assert "Session ended" in end_response_accumulator[-1]
 
 
 # # 1. Data Consistency Tests

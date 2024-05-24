@@ -49,7 +49,7 @@ def get_token_header(authorization: Optional[HTTPAuthorizationCredentials] = Dep
 
 def get_iat_from_token(token: str) -> datetime:
     # decode token
-    payload = jwt.decode(token, CONFIG.SECRET_KEY, algorithms=['HS256'])
+    payload = jwt.decode(token, CONFIG.SECRET_KEY.get_secret_value(), algorithms=['HS256'])
     # get user from payload
     iat = payload.get("iat")
     # convert to datetime
@@ -110,7 +110,7 @@ def create_defult_password(username: str):
 
 def get_user_from_token(token: str) -> UserOut:
     # decode token
-    payload = jwt.decode(token, CONFIG.SECRET_KEY, algorithms=['HS256'])
+    payload = jwt.decode(token, CONFIG.SECRET_KEY.get_secret_value(), algorithms=['HS256'])
     # get user from payload
     user = id_to_str(payload.get("user"))
     user_out = UserOut(**user)

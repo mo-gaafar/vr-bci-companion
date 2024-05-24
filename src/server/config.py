@@ -1,3 +1,4 @@
+from server.machine_learning.config import MLConfig
 from typing import Optional
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -105,6 +106,12 @@ class Settings(BaseSettings):
     POSTMARK_SENDER_EMAIL: str = Field(
         title="Postmark Sender Email",
         description="Postmark Sender Email",
+    )
+
+    ML_CONFIG: MLConfig = Field(
+        default=MLConfig(),
+        title="ML Config",
+        description="ML Configurations",
     )
 
     class Config:

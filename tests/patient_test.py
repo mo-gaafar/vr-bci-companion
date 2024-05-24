@@ -31,3 +31,8 @@ def test_signup(testapp):
             'details': 'User already exists', 'message': 'Data validation error'}
     else:
         assert response.status_code == 201
+
+
+
+
+

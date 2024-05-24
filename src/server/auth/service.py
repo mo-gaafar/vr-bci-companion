@@ -175,6 +175,6 @@ def get_user_from_pairing(device_id: str, otp: str) -> UserOut:
     """Gets the user from a valid pairing code."""
     pairing = validate_pairing(
         device_id=device_id, otp=otp, check_duplicate=False)
-    from common.util.security import verify_code
+    from server.common.util.security import verify_code
     verify_code(pairing.generation_timestamp, pairing.device_id, pairing.code)
     return fetch_user_by_device_id(device_id)
