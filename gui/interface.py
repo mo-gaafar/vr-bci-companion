@@ -1,5 +1,7 @@
 
 
+from qasync import QEventLoop
+import asyncio
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QVBoxLayout
 from gui.server_thread import open_server_log_popup
@@ -31,6 +33,18 @@ def init_connectors(self):
     self.plot_thread.update_plot_popup.connect(self.update_plot_popup)
 
 
+def init_signal_connections(self):
+    """Initializes the signal connections of PyQt GUI"""
+    # self.worker.connected.connect(
+    #     lambda: self.wsConnectionStatus.emit("Connected to WebSocket"))
+    # self.worker.disconnected.connect(
+    #     lambda: self.wsConnectionStatus.emit("Disconnected from WebSocket"))
+    
+    # establishes a connection between the connectionStatus signal (emitted by LSLStreamingThread)
+    # and the update_connection_status slot (a method in your ServerControlGUI class)
+    self.connectionStatus.connect(self.update_connection_status)
+    self.wsConnectionStatus.connect(self.update_connection_status)
+
 def init_bci_connection(self, connection):
     """Initializes the connection of PyQt GUI"""
     if connection == "Serial":
@@ -58,6 +72,21 @@ def get_LSL_config(self):
         #              "type": self.comboBox_stream3dt.currentText()},
     }
     return lsl_config
+
+
+def get_websocket_config(self):
+    """Gets the websocket configuration from PyQt GUI
+
+    Returns:
+        dict: Websocket configuration
+
+    """
+    # get websocket configuration
+    # convert to lowercase
+    ws_config = {
+        "server_select": str(self.comboBox_server_select.currentText()).lower(),
+    }
+    return ws_config
 
 
 def init_stream_plot(self):
@@ -139,7 +168,6 @@ def lsl_toggle(self):
     if self.lsl_thread is None:
         init_lsl_thread(self)
     else:
-        from gui.obci_lsl import stop_lsl_connection
         stop_lsl_connection(self)
 
 
@@ -182,7 +210,34 @@ def stop_server(self):
 
 
 def init_lsl_thread(self):
-    """Initializes the LSL thread"""
-    from gui.obci_lsl import start_lsl_connection
-    lsl_config = get_LSL_config(self)
-    start_lsl_connection(self, lsl_config)
+    """Initializes the LSL thread and starts the streaming task."""
+    if self.lsl_thread is None:
+        from gui.obci_lsl import lsl_stream_to_websocket
+
+        stream_config = get_LSL_config(self)
+        server_type = get_websocket_config(self)["server_select"]
+
+        # Get the Qt event loop
+        loop = QEventLoop(self)
+        asyncio.set_event_loop(loop)  # Set it as the default asyncio loop
+
+        async def run_lsl_stream():
+            await lsl_stream_to_websocket(self, stream_config, server_type)
+
+        # Schedule the coroutine to run within the Qt event loop
+        self.lsl_thread = loop.create_task(run_lsl_stream())
+
+        self.pushButton_LSL_lock.hide()
+        self.connectButton.show()
+        self.pushButton_show_plot.show()
+
+
+def stop_lsl_connection(self):
+    """Stops the LSL thread and cancels the streaming task."""
+    if self.lsl_thread is not None:
+        self.lsl_thread.cancel()  # Cancel the asyncio task
+        try:
+            asyncio.get_event_loop().run_until_complete(
+                self.lsl_thread)  # Wait for the task to finish gracefully
+        except asyncio.CancelledError:
+            pass  # Task cancellation is expected

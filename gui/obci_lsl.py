@@ -1,24 +1,21 @@
-from PyQt5.QtWebSockets import QWebSocket
-from PyQt5.QtCore import QObject, QThread, pyqtSignal, QUrl, QTimer
-from PyQt5.QtCore import QUrl, pyqtSignal, QThread, QTimer
+from PyQt5.QtCore import QUrl
 import uuid
-import pylsl
+import asyncio
 import json
-import time
-from PyQt5.QtNetwork import QAbstractSocket
+import pylsl
+from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtWebSockets import QWebSocket
 
-# Now you can safely set up your signals and slots that use SocketState
-
-
-
-BASE_WS_URL = "ws://localhost:8000/api/v1"
+LOCAL_BASE_URL = "ws://localhost:8000/api/v1"
+ONLINE_BASE_URL = "ws://server.neurohike.quest/api/v1"
 
 
-class WebSocketWorker(QObject):
+class WebSocketHandler(QObject):
     connected = pyqtSignal()
     disconnected = pyqtSignal()
     textMessageReceived = pyqtSignal(str)
-    connectionAcknowledged = pyqtSignal(bool)
+    connectionAcknowledged = pyqtSignal()
+    errorOccurred = pyqtSignal(str)  # Added for error reporting
 
     def __init__(self, session_id, channel_labels):
         super().__init__()
@@ -29,103 +26,79 @@ class WebSocketWorker(QObject):
         self.websocket.disconnected.connect(self.disconnected)
         self.websocket.textMessageReceived.connect(
             self.on_text_message_recieved)
-        self.ack_timer = QTimer(self)
-        self.ack_timer.setSingleShot(True)
-        self.ack_timer.timeout.connect(self.handle_ack_timeout)
 
-    def connect(self):
-        url = f"{BASE_WS_URL}/bci/stream/{self.session_id}"
+        # Connection status for reconnect attempts
+        self.connected_successfully = False
+
+    def connect(self, server_type="local"):
+        base_url = LOCAL_BASE_URL if server_type == "local" else ONLINE_BASE_URL
+        url = f"{base_url}/bci/stream/{self.session_id}"
         self.websocket.open(QUrl(url))
 
-    def send_initial_frame(self):
+    async def send_initial_frame(self):
         initial_frame = {
             "type": "START",
             "session_id": self.session_id,
-            "channel_labels": self.channel_labels
+            "channel_labels": self.channel_labels,
+            "sampling_rate": 250,
         }
-        self.websocket.sendTextMessage(json.dumps(initial_frame))
-        self.ack_timer.start(30000)
+        await self.websocket.sendTextMessage(json.dumps(initial_frame))
 
-    def send_data(self, data):
+    async def send_data(self, data):
         if self.websocket.isValid():
-            self.websocket.sendTextMessage(json.dumps(data))
+            await self.websocket.sendTextMessage(json.dumps(data))
 
     def on_text_message_recieved(self, message):
-        if message == "ACK":
-            self.ack_timer.stop()
-            self.connectionAcknowledged.emit(True)
+        if message.startswith("ACK"):
+            self.connected_successfully = True
+            self.connectionAcknowledged.emit()
         else:
             self.textMessageReceived.emit(message)
 
-    def handle_ack_timeout(self):
-        print("ACK not received, closing connection.")
-        self.websocket.close()
 
+async def lsl_stream_to_websocket(self, stream_config, server_type="local"):
+    # Resolve the LSL stream
+    # TODO: Change to use all streams? Or allow user to select stream
+    name = stream_config["stream_1"]["name"]
+    # send signal to update connection status
+    self.connectionStatus.emit("Connecting to LSL stream...")
+    streams = pylsl.resolve_byprop(
+        "name", name, timeout=5.0)
 
-class LSLStreamingThread(QThread):
-    data_received = pyqtSignal(str, float, list)
-    connectionStatus = pyqtSignal(str)
+    if not streams or len(streams) == 0:
+        # raise ValueError(f"Could not find LSL stream: {name}")
+        self.connectionStatus.emit(f"Could not find LSL stream: {name}")
+        # reactivate the connect button
+        self.connectButton.setEnabled(True)
+        # unhide the server select combobox
+        self.comboBox_server_select.setEnabled(True)
+        
+        return
 
-    def __init__(self, stream_config):
-        super().__init__()
-        self.stream_session_id = uuid.uuid4().hex
-        self.stream_config = stream_config
-        self.worker = WebSocketWorker(
-            self.stream_session_id, self.stream_config.get('channel_labels'))
-        # self.worker.moveToThread(self)
-        self.worker.connectionAcknowledged.connect(self.start_streaming)
-        self.worker.connected.connect(self.worker.send_initial_frame)
-        self.worker.textMessageReceived.connect(self.handle_message)
+    inlet = pylsl.StreamInlet(streams[0])
 
-    def run(self):
-        self.worker.connect()
-        self.setup_streams()
+    session_id = uuid.uuid4().hex
+    handler = WebSocketHandler(session_id, stream_config.get("channel_labels"))
 
-    def setup_streams(self):
-        for stream_id, config in self.stream_config.items():
-            try:
-                streams = pylsl.resolve_stream('name', config['name'])
-                self.connectionStatus.emit(f"Connected to stream: {stream_id}")
-                inlet = pylsl.StreamInlet(streams[0])
-                while self.isRunning():
-                    sample, timestamp = inlet.pull_sample(timeout=1.0)
-                    if sample:
-                        self.worker.send_data(
-                            {"data": sample, "timestamp": timestamp})
-                        self.data_received.emit(stream_id, timestamp, sample)
-            except pylsl.LostError:
-                self.connectionStatus.emit(f"Stream '{config['name']}' lost.")
-            except Exception as e:
-                self.connectionStatus.emit(str(e))
+    async def send_loop():
+        while True:
+            if handler.connected_successfully:  # Check if connection established
+                sample, timestamp = inlet.pull_sample(
+                    timeout=1.0)  # Get data from LSL
+                if sample:
+                    # Send over WebSocket
+                    await handler.send_data({"data": sample, "timestamps": [timestamp]})
 
-    def handle_message(self, message):
-        print(f"Message from server: {message}")
+            await asyncio.sleep(0.1)  # Control the rate of sending data
 
-    def start_streaming(self):
-        self.connectionStatus.emit("Streaming...")
+    async def reconnect_loop():
+        while True:
+            await asyncio.sleep(5)
+            if not handler.connected_successfully:
+                handler.connect(server_type)  # Retry connecting
+                await handler.send_initial_frame()
 
-    def stop(self):
-        self.stop_streaming = True
-        # self.websocket_client.close_connection()
-        print("Thread stopping and closing connection")  # Debug print
-
-
-def start_lsl_connection(self, stream_config):
-    if self.lsl_thread is None:
-        self.lsl_thread = LSLStreamingThread(stream_config)
-        self.lsl_thread.data_received.connect(self.handle_lsl_data)
-        self.lsl_thread.connectionStatus.connect(
-            self.update_connection_status)
-        self.lsl_thread.start()
-
-
-def stop_lsl_connection(self):
-    if self.lsl_thread is not None:
-        self.lsl_thread.stop()
-        self.lsl_thread.wait()  # Wait for thread to finish
-        self.lsl_thread = None
-
-
-def update_connection_status(self, status):
-    # Update your GUI's connection status display
-    pass
+    # Create tasks for sending and reconnecting
+    send_task = asyncio.create_task(send_loop())
+    reconnect_task = asyncio.create_task(reconnect_loop())
+    await asyncio.gather(send_task, reconnect_task)  # Run concurrently

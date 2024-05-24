@@ -1,4 +1,6 @@
 
+import asyncio
+from qasync import QEventLoop
 import datetime
 import logging
 import sys
@@ -7,7 +9,7 @@ from gui import interface
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
 from PyQt5 import QtGui, uic
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
 
 
 from gui.server_thread import init_server_process
@@ -22,6 +24,10 @@ from gui.sig_plot import PlotThread
 
 
 class ServerControlGUI(QMainWindow):
+    # initialize signals
+    wsConnectionStatus = pyqtSignal(str)
+    connectionStatus = pyqtSignal(str)
+
     def __init__(self, *args, **kwargs):
         super(ServerControlGUI, self).__init__(*args, **kwargs)
         # Determine UI file path based on runtime environment
@@ -48,6 +54,8 @@ class ServerControlGUI(QMainWindow):
         interface.init_connectors(self)
         interface.init_layout(self)
 
+        interface.init_signal_connections(self)
+
     @pyqtSlot(str)
     def append_output(self, text):
         if self.server_log_popup is not None:
@@ -56,7 +64,12 @@ class ServerControlGUI(QMainWindow):
 
     @pyqtSlot(str)
     def update_connection_status(self, status):
+        print(f"Updating connection status: {status}")
         self.label_connection_status.setText(status)
+
+    @pyqtSlot(str)
+    def update_ws_connection_status(self, status):
+        self.label_ws_connection_status.setText(status)
 
     @pyqtSlot(str, float, list)
     def handle_lsl_data(self, stream_id, timestamp, sample):
@@ -113,6 +126,9 @@ def main():
     try:
         app = QApplication(sys.argv)
         gui = ServerControlGUI()
+        # Set up QEventLoop for asyncio integration
+        loop = QEventLoop(app)
+        asyncio.set_event_loop(loop)  # Set it as the default asyncio loop
 
         gui.show()
         sys.exit(app.exec_())
