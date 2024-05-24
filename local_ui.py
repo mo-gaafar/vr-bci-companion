@@ -18,14 +18,20 @@ from gui.sig_plot import PlotThread
 # from PyQt5.QtNetwork import QAbstractSocket
 
 
-
 """local_ui.py - Main GUI for NeuroRehab Connect"""
 
 
 class ServerControlGUI(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(ServerControlGUI, self).__init__(*args, **kwargs)
-        uic.loadUi('./gui/MainWindow.ui', self)
+        # Determine UI file path based on runtime environment
+        if getattr(sys, 'frozen', False):  # Check if running as PyInstaller executable
+            import os
+            ui_file_path = os.path.join(sys._MEIPASS, "gui", "MainWindow.ui")
+        else:  # Running as script
+            ui_file_path = "gui/MainWindow.ui"
+
+        uic.loadUi(ui_file_path, self)
 
         # set the title and icon
         self.setWindowIcon(QtGui.QIcon('./gui/icons/icon.png'))

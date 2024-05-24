@@ -1,7 +1,7 @@
 import logging
 import threading
 from collections import deque
-
+from PyQt5 import QtCore
 import time
 
 
