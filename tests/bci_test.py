@@ -1,10 +1,7 @@
 import asyncio
-import json
 import random
 import pytest
-import websockets
 from server.bci.models import EEGChunk
-from tests.conftest import testapp  # Import your testapp fixture
 
 # Use a new UUID for each test
 SESSION_ID = "12345678-1234-5678-1234-567812345678"
