@@ -8,7 +8,7 @@ a = Analysis(
     ['local_ui.py'],
     pathex=['.venv/Lib/site-packages', 'gui', 'src'],
     binaries=[],
-    datas=[('gui', 'gui'), ('gui/MainWindow.ui', 'gui')],
+    datas=[('gui', 'gui'), ('gui/MainWindow.ui', 'gui'), ('src', 'src')],
     hiddenimports=['gui.interface', 'gui.server_thread', 'gui.sig_plot', 'pyqtgraph'],
     hookspath=[],
     hooksconfig={},
