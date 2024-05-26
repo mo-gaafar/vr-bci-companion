@@ -217,10 +217,11 @@ def init_lsl_thread(self):
         stream_config = get_LSL_config(self)
         server_type = get_websocket_config(self)["server_select"]
 
-        # Get the Qt event loop
-        loop = QEventLoop(self)
-        asyncio.set_event_loop(loop)  # Set it as the default asyncio loop
+        # # Get the Qt event loop
+        # loop = QEventLoop(self)
+        # asyncio.set_event_loop(loop)  # Set it as the default asyncio loop
 
+        loop = asyncio.get_event_loop()
         async def run_lsl_stream():
             await lsl_stream_to_websocket(self, stream_config, server_type)
 

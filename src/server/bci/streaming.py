@@ -140,7 +140,7 @@ def handle_start_message(data: Dict, session: BCISession):
 
 def handle_eeg_data(data: Dict, session: BCISession):
     eeg_data_msg = EEGChunk(**data)
-    session.add_chunk_to_buffer(eeg_data_msg)
+    session.add_eeg_data(eeg_data_msg)
 
 
 async def handle_end_message(data: Dict, session: BCISession, websocket: WebSocket):

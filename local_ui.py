@@ -125,12 +125,14 @@ class ServerControlGUI(QMainWindow):
 def main():
     try:
         app = QApplication(sys.argv)
-        gui = ServerControlGUI()
         # Set up QEventLoop for asyncio integration
         loop = QEventLoop(app)
         asyncio.set_event_loop(loop)  # Set it as the default asyncio loop
+        with loop:
+            gui = ServerControlGUI()
+            gui.show()
+            loop.run_forever()
 
-        gui.show()
         sys.exit(app.exec_())
     except Exception as e:
         logging.basicConfig(filename='app_errors.log', level=logging.ERROR)

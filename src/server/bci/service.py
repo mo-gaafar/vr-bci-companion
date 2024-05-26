@@ -46,6 +46,7 @@ class BCISession:
     last_received_timestamp: float = 0
     last_processed_timestamp: float = 0
     classification_model: Optional[object] = None
+    classification_buffer: List = field(default_factory=list)
     storage_repo: Union[
         # InfluxDBTimeSeriesRepository,
         # MongoDbTimeSeriesRepository,
@@ -59,8 +60,9 @@ class BCISession:
     info: Optional[mne.Info] = None
     # raw: Optional[RawArray] = None
 
-    def update_state(self, new_state: SessionState):
-        self.state = new_state
+    def update_state(self, new_state: Optional[SessionState] = None):
+        if new_state:
+            self.state = new_state
         if self.state == SessionState.CALIBRATION:
             # enter once the calibration mode is started
             if self.last_state != SessionState.CALIBRATION:
@@ -90,7 +92,7 @@ class BCISession:
             # Initialize MNE Info object if not already done
             self.info = mne.create_info(
                 ch_names=self.channel_labels,
-                sfreq=self.calibration.sampling_rate,
+                sfreq=self.calibration_data.sampling_rate,
                 ch_types=["eeg"] * len(self.channel_labels),
             )
             self.raw = mne.io.RawArray(
@@ -98,7 +100,7 @@ class BCISession:
             )
 
         if self.raw:
-            new_data = np.array(self.calibration.data)
+            new_data = np.array(self.calibration_data.data)
             self.raw.append(
                 mne.io.RawArray(new_data, info=self.info, verbose=False)
             )
@@ -115,8 +117,8 @@ class BCISession:
         while self.eeg_buffer:
             sample, timestamp = self.eeg_buffer.popleft()
             if self.state == SessionState.CALIBRATION:
-                self.calibration.data.append(sample)
-                self.calibration.timestamps.append(timestamp)
+                self.calibration_data.data.append(sample)
+                self.calibration_data.timestamps.append(timestamp)
                 self.last_received_timestamp = timestamp
             elif self.state in (SessionState.TRAINING, SessionState.CLASSIFICATION):
                 # Convert sample to a NumPy array and reshape for MNE
@@ -134,21 +136,23 @@ class BCISession:
                 self.last_received_timestamp = timestamp
 
         # Determine storage type based on chunk size
-        if len(self.calibration.data) >= self.chunk_size_threshold:
+        if len(self.calibration_data.data) >= self.chunk_size_threshold:
             self.storage_repo = LocalPickleStorage()  # Switch to LocalPickleStorage
         else:
-            self.storage_repo = MongoDbTimeSeriesRepository()  # Switch to time-series
+            # self.storage_repo = MongoDbTimeSeriesRepository()  # Switch to time-series
+            raise NotImplementedError("Timeseries storage not implemented yet.")
 
         # Store the data in the chosen repository
-        self.storage_repo.store_data(self.calibration)
+        self.storage_repo.store_data(self.calibration_data)
 
     def output_session_summary(self):
         print(f"Session ID: {self.session_id}")
         print(f"Session state: {self.state}")
         # print(f"EEG data length: {len(self.eeg_data)}")
-        print(f"Calibration data length: {len(self.calibration.data)} samples")
         print(
-            f"Classification data length: {len(self.classification.data)} samples")
+            f"Calibration data length: {len(self.calibration_data.data)} samples")
+        print(
+            f"Classification data length: {len(self.calibration_data.data)} samples")
 
     def init_training(self):
         """Starts the training mode."""
@@ -183,9 +187,9 @@ class BCISession:
 
     def get_session_stats(self):
         calibration_data_len = len(
-            self.calibration.data) if self.calibration else 0
+            self.calibration_data.data) if self.calibration_data else 0
         classification_data_len = len(
-            self.classification.data) if self.classification else 0
+            self.classification_buffer) if self.classification_buffer else 0
         eeg_buffer_len = len(self.eeg_buffer) if self.eeg_buffer else 0
         return {
             "session_id": self.session_id,

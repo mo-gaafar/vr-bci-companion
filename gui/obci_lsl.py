@@ -42,10 +42,12 @@ class WebSocketHandler(QObject):
             "channel_labels": self.channel_labels,
             "sampling_rate": 250,
         }
-        await self.websocket.sendTextMessage(json.dumps(initial_frame))
+        print("Sending initial frame")
+        self.websocket.sendTextMessage(json.dumps(initial_frame))
 
     async def send_data(self, data):
         if self.websocket.isValid():
+            print("Sending data")
             await self.websocket.sendTextMessage(json.dumps(data))
 
     def on_text_message_recieved(self, message):
@@ -58,6 +60,7 @@ class WebSocketHandler(QObject):
 
 async def lsl_stream_to_websocket(self, stream_config, server_type="local"):
     # Resolve the LSL stream
+
     # TODO: Change to use all streams? Or allow user to select stream
     name = stream_config["stream_1"]["name"]
     # send signal to update connection status
@@ -72,7 +75,7 @@ async def lsl_stream_to_websocket(self, stream_config, server_type="local"):
         self.connectButton.setEnabled(True)
         # unhide the server select combobox
         self.comboBox_server_select.setEnabled(True)
-        
+
         return
 
     inlet = pylsl.StreamInlet(streams[0])
@@ -81,16 +84,48 @@ async def lsl_stream_to_websocket(self, stream_config, server_type="local"):
     handler = WebSocketHandler(session_id, stream_config.get("channel_labels"))
 
     async def send_loop():
+        chunk_size = 64
+        samples_buffer = []
+        timestamps_buffer = []
+        send_queue = asyncio.Queue()  # Queue for sending chunks
+
+        async def send_task():  # Separate task for sending chunks
+            while True:
+                chunk = await send_queue.get()
+                if chunk is None:  # Sentinel value to stop the task
+                    break
+                await handler.send_data(chunk)
+
+        asyncio.create_task(send_task())  # Start the sending task
+
         while True:
-            if handler.connected_successfully:  # Check if connection established
-                sample, timestamp = inlet.pull_sample(
-                    timeout=1.0)  # Get data from LSL
-                if sample:
-                    # Send over WebSocket
-                    await handler.send_data({"data": sample, "timestamps": [timestamp]})
+            if handler.connected_successfully:
+                try:
+                    sample, timestamp = inlet.pull_sample(timeout=1.0)
 
-            await asyncio.sleep(0.1)  # Control the rate of sending data
+                    if sample:
+                        samples_buffer.append(sample)
+                        timestamps_buffer.append(timestamp)
 
+                    # Send only when the buffer is full, or if there's data and the connection is lost
+                    if (len(samples_buffer) >= chunk_size) or (samples_buffer and not handler.connected_successfully):
+                        chunk_data = {
+                            "data": samples_buffer,
+                            "timestamps": timestamps_buffer
+                        }
+                        await send_queue.put(chunk_data)  # Put chunk in the queue
+                        samples_buffer = []
+                        timestamps_buffer = []
+
+                except Exception as e:  # Error handling for LSL stream
+                    print(f"Error pulling sample from LSL stream: {e}")
+                    # Consider reconnecting or other error recovery actions here
+
+            await asyncio.sleep(0.1)  # Control the rate of checking for data
+
+        # Stop the sending task when the loop ends
+        await send_queue.put(None)
+    
     async def reconnect_loop():
         while True:
             await asyncio.sleep(5)
