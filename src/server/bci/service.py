@@ -186,19 +186,24 @@ class BCISession:
         self.state = new_state
 
     def get_session_stats(self):
-        calibration_data_len = len(
-            self.calibration_data.data) if self.calibration_data else 0
-        classification_data_len = len(
-            self.classification_buffer) if self.classification_buffer else 0
-        eeg_buffer_len = len(self.eeg_buffer) if self.eeg_buffer else 0
-        return {
-            "session_id": self.session_id,
-            "state": str(self.state),
-            "channels": dict(self.info.ch_names if self.info else None),
-            "calibration_data": calibration_data_len,
-            "classification_data": classification_data_len,
-            "eeg_buffer_data": eeg_buffer_len
-        }
+        try:
+            calibration_data_len = len(
+                self.calibration_data.data) if self.calibration_data else 0
+            classification_data_len = len(
+                self.classification_buffer) if self.classification_buffer else 0
+            eeg_buffer_len = len(self.eeg_buffer) if self.eeg_buffer else 0
+            dict_out =  {
+                "session_id": self.session_id,
+                "state": str(self.state),
+                "channels": dict(self.info.ch_names if self.info else None),
+                "calibration_data": calibration_data_len,
+                "classification_data": classification_data_len,
+                "eeg_buffer_data": eeg_buffer_len
+            }
+            return dict_out
+        except Exception as e:
+            print(f"Error getting session stats: {e}")
+            return None
 
     def __dict__(self):
         return {

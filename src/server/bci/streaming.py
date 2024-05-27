@@ -101,6 +101,7 @@ async def bci_websocket(websocket: WebSocket, session_id: uuid.UUID):
     try:
         while True:
             data_str = await websocket.receive_text()
+            print(data_str)
             data = json.loads(data_str)
             if data.get("type") == "START":
                 handle_start_message(data, session)
@@ -123,7 +124,7 @@ def handle_start_message(data: Dict, session: BCISession):
     This function:
     1. Parses the START message into a `StartMessage` object.
     2. Initializes the session with the received channel labels and sampling rate.
-    3. Creates an empty `RawArray` to store the incoming EEG data.
+    3. Creates an empty `RawAr,ray` to store the incoming EEG data.
     """
     start_msg = StartMessage(**data)
     session.info = mne.create_info(

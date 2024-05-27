@@ -36,6 +36,7 @@ class WebSocketHandler(QObject):
         self.websocket.open(QUrl(url))
 
     async def send_initial_frame(self):
+        # Made this method asynchronous
         initial_frame = {
             "type": "START",
             "session_id": self.session_id,
@@ -43,7 +44,10 @@ class WebSocketHandler(QObject):
             "sampling_rate": 250,
         }
         print("Sending initial frame")
-        self.websocket.sendTextMessage(json.dumps(initial_frame))
+        await asyncio.sleep(0.1)  # Wait for the connection to open
+        print(f"Socket state: {self.websocket.state()}")
+        if self.websocket.state() == QWebSocket.ConnectedState:
+            self.websocket.sendTextMessage(json.dumps(initial_frame))
 
     async def send_data(self, data):
         if self.websocket.isValid():
@@ -81,7 +85,8 @@ async def lsl_stream_to_websocket(self, stream_config, server_type="local"):
     inlet = pylsl.StreamInlet(streams[0])
 
     session_id = uuid.uuid4().hex
-    handler = WebSocketHandler(session_id, stream_config.get("channel_labels"))
+    handler = WebSocketHandler(
+        session_id, stream_config["stream_1"]["channels"])
 
     async def send_loop():
         chunk_size = 64
@@ -113,7 +118,8 @@ async def lsl_stream_to_websocket(self, stream_config, server_type="local"):
                             "data": samples_buffer,
                             "timestamps": timestamps_buffer
                         }
-                        await send_queue.put(chunk_data)  # Put chunk in the queue
+                        # Put chunk in the queue
+                        await send_queue.put(chunk_data)
                         samples_buffer = []
                         timestamps_buffer = []
 
@@ -125,7 +131,7 @@ async def lsl_stream_to_websocket(self, stream_config, server_type="local"):
 
         # Stop the sending task when the loop ends
         await send_queue.put(None)
-    
+
     async def reconnect_loop():
         while True:
             await asyncio.sleep(5)

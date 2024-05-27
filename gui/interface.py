@@ -39,11 +39,12 @@ def init_signal_connections(self):
     #     lambda: self.wsConnectionStatus.emit("Connected to WebSocket"))
     # self.worker.disconnected.connect(
     #     lambda: self.wsConnectionStatus.emit("Disconnected from WebSocket"))
-    
+
     # establishes a connection between the connectionStatus signal (emitted by LSLStreamingThread)
     # and the update_connection_status slot (a method in your ServerControlGUI class)
     self.connectionStatus.connect(self.update_connection_status)
     self.wsConnectionStatus.connect(self.update_connection_status)
+
 
 def init_bci_connection(self, connection):
     """Initializes the connection of PyQt GUI"""
@@ -65,9 +66,12 @@ def get_LSL_config(self):
     # get LSL configuration
     lsl_config = {
         "stream_1": {"name": self.lineEdit_stream1name.text(),
-                     "type": self.comboBox_stream1dt.currentText()},
+                     "type": self.comboBox_stream1dt.currentText(),
+                     "channels": ['T3', 'T4', 'C3', 'C4', 'O1', 'O2', 'P3', 'P4']
+                     },
         "stream_2": {"name": self.lineEdit_stream2name.text(),
-                     "type": self.comboBox_stream2dt.currentText()},
+                     "type": self.comboBox_stream2dt.currentText(),
+                     "channels": ['T3', 'T4', 'C3', 'C4', 'O1', 'O2', 'P3', 'P4']},
         # "stream_3": {"name": self.lineEdit_stream3name.text(),
         #              "type": self.comboBox_stream3dt.currentText()},
     }
@@ -222,6 +226,7 @@ def init_lsl_thread(self):
         # asyncio.set_event_loop(loop)  # Set it as the default asyncio loop
 
         loop = asyncio.get_event_loop()
+
         async def run_lsl_stream():
             await lsl_stream_to_websocket(self, stream_config, server_type)
 
