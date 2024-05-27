@@ -46,13 +46,20 @@ class WebSocketHandler(QObject):
         print("Sending initial frame")
         await asyncio.sleep(0.1)  # Wait for the connection to open
         print(f"Socket state: {self.websocket.state()}")
-        if self.websocket.state() == QWebSocket.ConnectedState:
+        if self.websocket.state() == 3:  # QAbstractSocket::ConnectedState = 3
             self.websocket.sendTextMessage(json.dumps(initial_frame))
 
     async def send_data(self, data):
-        if self.websocket.isValid():
-            print("Sending data")
-            await self.websocket.sendTextMessage(json.dumps(data))
+        if self.websocket.state() == 3:
+            data = {
+                "type": "EEG_DATA",
+                "session_id": self.session_id,
+                "data": data["data"],
+                "timestamps": data["timestamps"]
+            }
+            self.websocket.sendTextMessage(json.dumps(data))
+        else:
+            raise ValueError("Websocket is not connected")
 
     def on_text_message_recieved(self, message):
         if message.startswith("ACK"):
@@ -99,7 +106,17 @@ async def lsl_stream_to_websocket(self, stream_config, server_type="local"):
                 chunk = await send_queue.get()
                 if chunk is None:  # Sentinel value to stop the task
                     break
-                await handler.send_data(chunk)
+                try:
+                    await handler.send_data(chunk)
+                except Exception as e:
+                    print(f"Error sending data: {e}")
+                    self.connectionStatus.emit("Error sending data")
+                    # accumulate in queue and send later
+                    await send_queue.put(chunk)
+                    if not handler.connected_successfully:
+                        # retry connecting
+                        handler.connect(server_type)
+                        await handler.send_initial_frame()
 
         asyncio.create_task(send_task())  # Start the sending task
 

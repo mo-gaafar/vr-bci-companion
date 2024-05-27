@@ -101,7 +101,7 @@ async def bci_websocket(websocket: WebSocket, session_id: uuid.UUID):
     try:
         while True:
             data_str = await websocket.receive_text()
-            print(data_str)
+            # print(data_str)# for debugging purposes
             data = json.loads(data_str)
             if data.get("type") == "START":
                 handle_start_message(data, session)
