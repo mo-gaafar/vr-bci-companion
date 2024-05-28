@@ -27,6 +27,9 @@ from server.bci.models import (
 
 from dataclasses import dataclass, field
 
+from server.bci.models import CalibrationProtocol
+from .util import *
+
 
 @dataclass
 class BCISession:
@@ -55,38 +58,35 @@ class BCISession:
     ] = field(default_factory=LocalPickleStorage)
     chunk_size_threshold: int = 1000
     calibration_data: Optional[RawArray] = None
-    # events: Optional[List[list]] = None
-    # event_id: Optional[dict] = None
+    calibration_protocol: Optional[CalibrationProtocol] = None
+    calibration_events: Optional[List] = None
+    calibration_duration: Optional[float] = None  # in seconds
     info: Optional[mne.Info] = None
+    event_id: Optional[dict] = None
     # raw: Optional[RawArray] = None
 
     def update_state(self, new_state: Optional[SessionState] = None):
         if new_state:
             self.state = new_state
-        if self.state == SessionState.CALIBRATION:
-            # enter once the calibration mode is started
-            if self.last_state != SessionState.CALIBRATION:
-                self.init_calibration()
+        # if self.state == SessionState.CALIBRATION:
+        #     # enter once the calibration mode is started
+        #     if self.last_state != SessionState.CALIBRATION:
+        #         self.init_calibration()
         elif self.state == SessionState.TRAINING:
             # enter once the training mode is started
             if self.last_state != SessionState.TRAINING:
                 self.init_training()
 
         self.last_state = self.state
-
+    
     def add_eeg_data(self, data: EEGChunk):
-        """Add EEG data to the session and process it based on the current state."""
-        self.update_state()
-        if self.state == SessionState.CLASSIFICATION or self.state == SessionState.CALIBRATION:
-            for sample, timestamp in zip(data.data, data.timestamps):
-                self.eeg_buffer.append((sample, timestamp))
+            self.update_state()
+            if self.state == SessionState.CALIBRATION:
+                self.handle_calibration_data(data)
+            elif self.state == SessionState.CLASSIFICATION:
+                self.handle_classification_data(data)
 
-            if len(self.eeg_buffer) >= self.chunk_size_threshold:
-                self.process_buffer()
-
-            self.handle_classification(data)
-
-    def init_calibration(self):
+    def init_calibration(self, protocol: CalibrationProtocol):
         """Handle EEG data during calibration."""
         if not self.info:
             # Initialize MNE Info object if not already done
@@ -98,6 +98,13 @@ class BCISession:
             self.raw = mne.io.RawArray(
                 np.zeros((len(self.channel_labels), 0)), info=self.info, verbose=False
             )
+        if protocol:
+            self.calibration_protocol = protocol
+            # calculate time from protocol
+            # self.protocol_time = calc_protocol_time(protocol)
+            first_epoch = 0  # ! TODO: get the first epoch number from the calibration data
+            self.calibration_events, self.event_id = generate_mne_event_labels(
+                protocol, first_epoch)
 
         if self.raw:
             new_data = np.array(self.calibration_data.data)
@@ -105,46 +112,64 @@ class BCISession:
                 mne.io.RawArray(new_data, info=self.info, verbose=False)
             )
 
-        if self.raw is not None and self.calibration_data is None and self.events is not None and self.event_id is not None:
+        if self.raw is not None and self.calibration_data is None and self.calibration_events is not None and self.event_id is not None:
             self.calibration_data = mne.Epochs(
-                self.raw, events=self.events, event_id=self.event_id, tmin=-0.2, tmax=0.5
+                self.raw, events=self.calibration_events, event_id=self.event_id, tmin=-0.2, tmax=0.5
             )
-        # ... rest of the method (store calibration data, check duration, etc.)
-        #
+        # store calibraiton data?
 
-    def process_buffer(self):
-        """Process the data in the buffer."""
-        while self.eeg_buffer:
-            sample, timestamp = self.eeg_buffer.popleft()
-            if self.state == SessionState.CALIBRATION:
-                self.calibration_data.data.append(sample)
-                self.calibration_data.timestamps.append(timestamp)
-                self.last_received_timestamp = timestamp
-            elif self.state in (SessionState.TRAINING, SessionState.CLASSIFICATION):
-                # Convert sample to a NumPy array and reshape for MNE
-                new_data = np.array(sample).reshape(1, -1)
-                # Assuming session.raw is already initialized
-                if self.raw is None:
-                    self.raw = mne.io.RawArray(
-                        new_data, info=self.info, verbose=False
-                    )
-                else:
-                    self.raw.append(
-                        mne.io.RawArray(
-                            new_data, info=self.info, verbose=False)
-                    )
-                self.last_received_timestamp = timestamp
+        # get calibraiton duration based on protocol
+        self.calibration_duration = calc_protocol_time(
+            self.calibration_protocol)
 
-        # Determine storage type based on chunk size
-        if len(self.calibration_data.data) >= self.chunk_size_threshold:
-            self.storage_repo = LocalPickleStorage()  # Switch to LocalPickleStorage
-        else:
-            # self.storage_repo = MongoDbTimeSeriesRepository()  # Switch to time-series
-            raise NotImplementedError("Timeseries storage not implemented yet.")
+        self.set_state(SessionState.CALIBRATION)
 
-        # Store the data in the chosen repository
-        self.storage_repo.store_data(self.calibration_data)
+    def handle_calibration_data(self, data: EEGChunk):
+        timestamps_sec = [ts / 1000 for ts in data.timestamps]  # Convert to seconds
 
+        # Initialize RawArray if needed
+        if not self.info:
+            self.info = mne.create_info(
+                ch_names=data.channel_labels,  # Get channel labels from the chunk
+                sfreq=data.sampling_rate,
+                ch_types=["eeg"] * len(data.channel_labels),
+            )
+            self.raw = mne.io.RawArray(
+                np.zeros((len(data.channel_labels), 0)), info=self.info, verbose=False
+            )
+
+        # Append data, checking for repeated timestamps
+        last_timestamp = self.raw.times[-1] if self.raw and len(self.raw.times) > 0 else -1
+        for i, (sample, timestamp) in enumerate(zip(data.data, timestamps_sec)):
+            if timestamp > last_timestamp:
+                self.raw.append(
+                    mne.io.RawArray(np.array(sample).reshape(1, -1), info=self.info, verbose=False),
+                    first_samp=len(self.raw.times),
+                )
+                last_timestamp = timestamp
+
+        # Check for calibration end based on duration
+        if self.raw.times[-1] - self.raw.times[0] >= self.calibration_duration:
+            self.end_calibration()
+
+    def end_calibration(self):
+        self.calibration_data = mne.Epochs(
+            self.raw, events=self.calibration_events, event_id=self.event_id, tmin=-0.2, tmax=0.5
+        )
+        
+        # Store calibration data using chosen repository
+        self.storage_repo.store_data(self.calibration_data)  # Or use time-series repo if applicable
+
+        self.set_state(SessionState.TRAINING)
+
+        # Your classification logic here using self.raw...
+
+    def init_training(self):
+        # Check model training status
+        is_training_complete = MachineLearningService.check_training_status(self.session_id)
+        if is_training_complete:
+            self.set_state(SessionState.CLASSIFICATION)
+    
     def output_session_summary(self):
         print(f"Session ID: {self.session_id}")
         print(f"Session state: {self.state}")
@@ -153,13 +178,6 @@ class BCISession:
             f"Calibration data length: {len(self.calibration_data.data)} samples")
         print(
             f"Classification data length: {len(self.calibration_data.data)} samples")
-
-    def init_training(self):
-        """Starts the training mode."""
-        # Implement model training status checker here
-        # if status is done then change the state to classification
-
-        pass
 
     def handle_classification(self, data: EEGChunk):
         epoch_length = 100  # Adjust for your sampling rate and desired epoch length
@@ -192,7 +210,7 @@ class BCISession:
             classification_data_len = len(
                 self.classification_buffer) if self.classification_buffer else 0
             eeg_buffer_len = len(self.eeg_buffer) if self.eeg_buffer else 0
-            dict_out =  {
+            dict_out = {
                 "session_id": self.session_id,
                 "state": str(self.state),
                 "channels": dict(self.info.ch_names if self.info else None),

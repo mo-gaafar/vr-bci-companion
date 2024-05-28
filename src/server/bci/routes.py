@@ -37,14 +37,23 @@ PLACEHOLDER_PROTOCOL = CalibrationProtocol(
 @bci.get("/calibration/start/{session_id}", response_model=CalibrationStartResponse)
 def start_calibration(session_id: str = Path(..., description="The session ID of the calibration session")):
     # Implementation to initiate a calibration session
+    # check if session exists
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    #Placeholder Calibration protocol
+    protocol = PLACEHOLDER_PROTOCOL
+    # Start the calibration session and return the response
+    session.init_calibration(protocol)
 
-    return CalibrationStartResponse(message="Dummy calibration", sessionId="1234", protocol=PLACEHOLDER_PROTOCOL, start_time="2021-01-01T00:00:00Z")
+    return CalibrationStartResponse(message="Dummy calibration", sessionId="1234", protocol=protocol, start_time="2021-01-01T00:00:00Z")
 
 
 @bci.get("/classification/start/{session_id}", response_model=ClassificationStartResponse)
 def start_classification(request: ClassificationStartRequest):
     # Start the classification mode and return the response
-    
+
     return ClassificationStartResponse(...)
 
 
@@ -69,6 +78,15 @@ def get_sessions(session_state: SessionState = Query(None, description="Filter s
                  ):
     # ? TODO get by ID implementation
     sessions = []
+    if session_id and session_state:
+        raise HTTPException(
+            status_code=400, detail="Cannot filter by both session ID and state")
+    if session_id:
+        session = session_manager.get_session(session_id)
+        if session:
+            return session.__dict__()
+        else:
+            raise HTTPException(status_code=404, detail="Session not found")
     if not session_state:
         for session in session_manager.sessions:
             sessions.append(session.__dict__())
