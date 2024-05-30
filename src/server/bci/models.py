@@ -127,8 +127,8 @@ class EEGData(BaseModel):
 
 class CalibrationStartResponse(BaseModel):
     message: str
-    sessionId: str = Field(...,
-                           description="A unique identifier for the calibration session")
+    session_id: str = Field(...,
+                            description="A unique identifier for the calibration session")
     protocol: List[CalibrationProtocol]
     start_time: str = Field(...,
                             description="ISO8601 timestamp of the calibration session start time")

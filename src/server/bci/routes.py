@@ -38,16 +38,16 @@ PLACEHOLDER_PROTOCOL = CalibrationProtocol(
 def start_calibration(session_id: str = Path(..., description="The session ID of the calibration session")):
     # Implementation to initiate a calibration session
     # check if session exists
-    session = session_manager.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    # session = session_manager.get_session(session_id)
+    # if not session:
+    #     raise HTTPException(status_code=404, detail="Session not found")
     
     #Placeholder Calibration protocol
     protocol = PLACEHOLDER_PROTOCOL
     # Start the calibration session and return the response
-    session.init_calibration(protocol)
+    # session.init_calibration(protocol)
 
-    return CalibrationStartResponse(message="Dummy calibration", sessionId="1234", protocol=protocol, start_time="2021-01-01T00:00:00Z")
+    return CalibrationStartResponse(message="Dummy calibration", session_id="1234", protocol=protocol, start_time="2021-01-01T00:00:00Z")
 
 
 @bci.get("/classification/start/{session_id}", response_model=ClassificationStartResponse)
