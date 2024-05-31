@@ -47,7 +47,7 @@ def start_calibration(session_id: str = Path(..., description="The session ID of
     # Start the calibration session and return the response
     # session.init_calibration(protocol)
 
-    return CalibrationStartResponse(message="Dummy calibration", session_id="1234", protocol=protocol, start_time="2021-01-01T00:00:00Z")
+    return CalibrationStartResponse(message="Dummy calibration started", session_id="1234", protocol=protocol, start_time="2021-01-01T00:00:00Z")
 
 
 @bci.get("/classification/start/{session_id}", response_model=ClassificationStartResponse)
