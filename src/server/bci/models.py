@@ -44,6 +44,7 @@ class SessionState(str, Enum):
     UNSTARTED = "Unstarted"
     CALIBRATION = "Calibration"
     TRAINING = "Training"
+    READY_FOR_CLASSIFICATION = "Ready for Classification"
     CLASSIFICATION = "Classification"
     CLOSED = "Closed"
 
@@ -127,22 +128,24 @@ class EEGData(BaseModel):
 
 class CalibrationStartResponse(BaseModel):
     message: str
-    sessionId: str = Field(...,
-                           description="A unique identifier for the calibration session")
+    session_id: str = Field(...,
+                            description="A unique identifier for the calibration session")
     protocol: List[CalibrationProtocol]
     start_time: str = Field(...,
                             description="ISO8601 timestamp of the calibration session start time")
 
 
 class ClassificationStartRequest(BaseModel):
-    modelId: str = Field(...,
-                         description="The model ID to use for real-time classification")
+    model_id: str = Field(...,
+                          description="The model ID to use for real-time classification")
+    session_id: str = Field(...,
+                            description="The session ID of the classification session")
 
 
 class ClassificationStartResponse(BaseModel):
-    message: str
-    sessionId: str = Field(...,
-                           description="A unique identifier for the classification session")
+    message: str = "Classification started"
+    session_id: str = Field(...,
+                            description="A unique identifier for the classification session")
 
 
 class ClassificationResult(BaseModel):
@@ -150,3 +153,67 @@ class ClassificationResult(BaseModel):
                        description="The classified state, e.g., 'Imagined Walking', 'Rest'")
     timestamp: str = Field(...,
                            description="ISO8601 timestamp of the classification result")
+    issued_at: str = Field(...,
+                           description="ISO8601 timestamp of when the classification result was issued")
+
+
+class ServersEnum(str, Enum):
+    local = "local"
+    heroku = "heroku"
+    aws = "aws"
+
+
+class ConnectionLog(BaseModel):
+    timestamp: datetime = Field(...,
+                                description="ISO8601 timestamp of the connection log")
+    status: ConnectionStatus = Field(...,
+                                     description="The connection status")
+    message: str = Field(...,
+                         description="The connection message")
+
+
+class ClassificatoinLog(BaseModel):
+    timestamp: datetime = Field(...,
+                                description="ISO8601 timestamp of the classification log")
+    message: str = Field(...,
+                         description="The classification message")
+    issued_at: str = Field(...,
+                           description="ISO8601 timestamp of when the classification result was issued")
+    output: str = Field(...,
+                        description="The classification output")
+
+
+class SessionInDB(BaseModel):
+    session_id: str = Field(...,
+                            description="A unique identifier for the session")
+    state: SessionState = Field(...,
+                                description="The state of the session")
+    start_time: str = Field(...,
+                            description="ISO8601 timestamp of the session start time")
+    end_time: Optional[str] = Field(
+        None, description="ISO8601 timestamp of the session end time")
+
+    protocol: Optional[CalibrationProtocol] = Field(
+        None, description="The calibration protocol used in the session")
+
+    model_id: Optional[str] = Field(
+        None, description="The model ID used in the session")
+    model_repo: Optional[str] = Field(
+        None, description="The model repository used in the session")
+    model_path: Optional[str] = Field(
+        None, description="The model path used in the session")
+    model_version: Optional[str] = Field(
+        None, description="The model version used in the session")
+
+    classification_state: Optional[str] = Field(
+        None, description="The current classification state")
+    last_classification_result: Optional[ClassificationResult] = Field(
+        None, description="The last classification result")
+
+    connection_logs: List[str] = Field(
+        [], description="List of connection logs for the session")
+    classification_logs: List[str] = Field(
+        [], description="List of classification logs for the session")
+
+    running_on: Optional[ServersEnum] = Field(
+        None, description="The server where the session is running")

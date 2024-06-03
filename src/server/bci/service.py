@@ -78,13 +78,13 @@ class BCISession:
                 self.init_training()
 
         self.last_state = self.state
-    
+
     def add_eeg_data(self, data: EEGChunk):
-            self.update_state()
-            if self.state == SessionState.CALIBRATION:
-                self.handle_calibration_data(data)
-            elif self.state == SessionState.CLASSIFICATION:
-                self.handle_classification_data(data)
+        self.update_state()
+        if self.state == SessionState.CALIBRATION:
+            self.handle_calibration_data(data)
+        elif self.state == SessionState.CLASSIFICATION:
+            self.handle_classification_data(data)
 
     def init_calibration(self, protocol: CalibrationProtocol):
         """Handle EEG data during calibration."""
@@ -125,7 +125,8 @@ class BCISession:
         self.set_state(SessionState.CALIBRATION)
 
     def handle_calibration_data(self, data: EEGChunk):
-        timestamps_sec = [ts / 1000 for ts in data.timestamps]  # Convert to seconds
+        # Convert to seconds
+        timestamps_sec = [ts / 1000 for ts in data.timestamps]
 
         # Initialize RawArray if needed
         if not self.info:
@@ -139,11 +140,13 @@ class BCISession:
             )
 
         # Append data, checking for repeated timestamps
-        last_timestamp = self.raw.times[-1] if self.raw and len(self.raw.times) > 0 else -1
+        last_timestamp = self.raw.times[-1] if self.raw and len(
+            self.raw.times) > 0 else -1
         for i, (sample, timestamp) in enumerate(zip(data.data, timestamps_sec)):
             if timestamp > last_timestamp:
                 self.raw.append(
-                    mne.io.RawArray(np.array(sample).reshape(1, -1), info=self.info, verbose=False),
+                    mne.io.RawArray(np.array(sample).reshape(
+                        1, -1), info=self.info, verbose=False),
                     first_samp=len(self.raw.times),
                 )
                 last_timestamp = timestamp
@@ -156,9 +159,10 @@ class BCISession:
         self.calibration_data = mne.Epochs(
             self.raw, events=self.calibration_events, event_id=self.event_id, tmin=-0.2, tmax=0.5
         )
-        
+
         # Store calibration data using chosen repository
-        self.storage_repo.store_data(self.calibration_data)  # Or use time-series repo if applicable
+        # Or use time-series repo if applicable
+        self.storage_repo.store_data(self.calibration_data)
 
         self.set_state(SessionState.TRAINING)
 
@@ -166,10 +170,27 @@ class BCISession:
 
     def init_training(self):
         # Check model training status
-        is_training_complete = MachineLearningService.check_training_status(self.session_id)
+        is_training_complete = MachineLearningService.check_training_status(
+            self.session_id)
         if is_training_complete:
+            self.set_state(SessionState.READY_FOR_CLASSIFICATION)
+
+    def init_classification(self, model_id: str):
+        if not model_id:
+            raise Exception("Model ID required for classification.")
+        if self.state == SessionState.CLASSIFICATION and self.classification_model is not None:
+            # Already in classification mode so just return
+            return
+        elif self.state == SessionState.TRAINING:
+            # Wait for training to complete
+            raise Exception(
+                "Cannot start classification until training is complete.")
+        if self.state == SessionState.READY_FOR_CLASSIFICATION:
+            # Load the classification model
+            self.classification_model = MachineLearningService.load_model(
+                model_id)
             self.set_state(SessionState.CLASSIFICATION)
-    
+
     def output_session_summary(self):
         print(f"Session ID: {self.session_id}")
         print(f"Session state: {self.state}")
@@ -230,6 +251,7 @@ class BCISession:
             "channels": dict(self.info.ch_names if self.info else None),
         }
 
+from .repo import ISessionRepository, session_repo
 
 class SessionManager:
     def __init__(self):

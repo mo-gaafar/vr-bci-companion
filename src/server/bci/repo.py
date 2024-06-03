@@ -33,11 +33,11 @@ class BCIRepo:
         return raw
 
 
-# class ISessionRepository(ABC):
-#     '''Interface for saving session data to a repository.'''
-#     @abstractmethod
-#     def save_session(self, session_data: Dict[str, Any]) -> None:
-#         pass
+class ISessionRepository(ABC):
+    '''Interface for saving session data to a repository.'''
+    @abstractmethod
+    def save_session(self, session_data: Dict[str, Any]) -> None:
+        pass
 
 
 # class IEEGDataRepository(ABC):
@@ -47,13 +47,19 @@ class BCIRepo:
 #         pass
 
 
-# class MongoDBSessionRepository(ISessionRepository):
-#     def __init__(self):
-#         self.db = MongoDB
-#         self.collection = self.db['sessions']
+class MongoDBSessionRepository(ISessionRepository):
+    def __init__(self):
+        self.db = MongoDB
+        self.collection = self.db['sessions']
 
-#     def save_session(self, session_data: Dict[str, Any]) -> None:
-#         self.collection.insert_one(session_data)
+    def save_session(self, session_data: Dict[str, Any]) -> None:
+        self.collection.insert_one(session_data)
+
+
+def get_session_repo():
+    # Choose the repository based on configuration
+    # if BCI_USE_MONGO:
+    return MongoDBSessionRepository()
 
 
 # class MongoDBEEGDataRepository(IEEGDataRepository):

@@ -1,3 +1,5 @@
+from typing import Optional
+from datetime import datetime
 from fastapi import Query
 from server.bci.streaming import bci_websocket
 from server.bci.models import CalibrationAction, CalibrationSet, CalibrationProtocol
@@ -35,14 +37,14 @@ PLACEHOLDER_PROTOCOL = CalibrationProtocol(
 
 
 @bci.get("/calibration/start/{session_id}", response_model=CalibrationStartResponse)
-def start_calibration(session_id: str = Path(..., description="The session ID of the calibration session")):
+def start_calibration(session_id: Optional[str] = Path(None, description="The session ID of the calibration session")):
     # Implementation to initiate a calibration session
     # check if session exists
     session = session_manager.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    
-    #Placeholder Calibration protocol
+
+    # Placeholder Calibration protocol
     protocol = PLACEHOLDER_PROTOCOL
     # Start the calibration session and return the response
     session.init_calibration(protocol)
@@ -53,8 +55,21 @@ def start_calibration(session_id: str = Path(..., description="The session ID of
 @bci.get("/classification/start/{session_id}", response_model=ClassificationStartResponse)
 def start_classification(request: ClassificationStartRequest):
     # Start the classification mode and return the response
-
-    return ClassificationStartResponse(...)
+    try:
+        session = session_manager.get_session(request.session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        try:
+            session.init_classification(request)
+            return ClassificationStartResponse(message="Classification started",
+                                               session_id=request.session_id,
+                                               start_time=datetime.now(),
+                                               protocol=PLACEHOLDER_PROTOCOL,
+                                               server="localhost")
+        except Exception as e:
+            raise HTTPException(status_code=401, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @bci.get("/classification/result/{session_id}", response_model=ClassificationResult)
@@ -68,25 +83,31 @@ def fetch_classification_result(session_id: str = Path(..., description="The ses
 @bci.websocket("/stream/{session_id}")
 async def bci_websocket(session_id: str, websocket: WebSocket):
     from server.bci.streaming import bci_websocket as bci_websocket_stream
+    # create a new session and start streaming data
+    # create the session in the db
+
     await bci_websocket_stream(websocket, session_id)
 
 
-@bci.get("/sessions")
+@bci.get("/session/{location}/")
 def get_sessions(session_state: SessionState = Query(None, description="Filter sessions by state", alias="state"),
                  session_id: str = Query(
-                     None, description="Filter sessions by ID", alias="id")
+                     None, description="Filter sessions by ID", alias="id"),
                  ):
-    # ? TODO get by ID implementation
+    '''Get a list of sessions based on the query parameters. If no parameters are provided, all sessions are returned.
+    If a session ID is provided, only the session with that ID is returned. If a session state is provided, only sessions with that state are returned.'''
     sessions = []
     if session_id and session_state:
         raise HTTPException(
             status_code=400, detail="Cannot filter by both session ID and state")
+    
     if session_id:
         session = session_manager.get_session(session_id)
         if session:
             return session.__dict__()
         else:
             raise HTTPException(status_code=404, detail="Session not found")
+        
     if not session_state:
         for session in session_manager.sessions:
             sessions.append(session.__dict__())
