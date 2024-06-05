@@ -16,12 +16,12 @@ class ConnectionStatus(str, Enum):
 
 class CalibrationAction(BaseModel):
     """Protocol for the calibration session"""
-    baseline: Optional[bool] = Field(None,
-                                     description="How long the baseline is, before the action is performed.")
-    time: int = Field(...,
-                      description="Time in seconds when the instruction should be displayed")
-    cooldown: Optional[bool] = Field(None,
-                                     description="How long the cooldown is, after the action is performed.")
+    baseline: Optional[float] = Field(None,
+                                      description="How long the baseline is, before the action is performed.")
+    time: float = Field(...,
+                        description="Time in seconds when the instruction should be displayed")
+    cooldown: Optional[float] = Field(None,
+                                      description="How long the cooldown is, after the action is performed.")
     action: str = Field(...,
                         description="The specific action or instruction for the user")
     label: Optional[str] = Field(None,
@@ -143,7 +143,7 @@ class CalibrationStartResponse(BaseModel):
 
 class ClassificationStartRequest(BaseModel):
     ml_model_id: str = Field(...,
-                          description="The model ID to use for real-time classification")
+                             description="The model ID to use for real-time classification")
     session_id: str = Field(...,
                             description="The session ID of the classification session")
 

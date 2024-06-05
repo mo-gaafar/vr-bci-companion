@@ -22,17 +22,17 @@ bci = APIRouter(prefix="/bci", tags=["bci"])
 
 MAIN_TRIAL_SET = CalibrationSet(
     name="Main Trial Set", repeat=100, actions=[
-        CalibrationAction(time=5, action="Start Imagining Walking"),
-        CalibrationAction(time=5, action="Stop and Rest")
+        CalibrationAction(time=5, action="Start Imagining Walking", cooldown=3, baseline=2, label="feet"),
+        CalibrationAction(time=5, action="Stop and Rest", cooldown=3, baseline=2, label="rest"),
     ]
 )
 PLACEHOLDER_PROTOCOL = CalibrationProtocol(
     prepare=CalibrationSet(name="Prepare", repeat=1, actions=[
-        CalibrationAction(time=5, action="Prepare for Calibration")
+        CalibrationAction(time=5, action="Prepare for Calibration", cooldown=3, baseline=2, label="prepare")
     ]),
     main_trial=MAIN_TRIAL_SET,
     end=CalibrationSet(name="End", repeat=1, actions=[
-        CalibrationAction(time=5, action="End Calibration")
+        CalibrationAction(time=5, action="End Calibration", cooldown=3, baseline=2, label="end")
     ])
 )
 

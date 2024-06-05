@@ -1,4 +1,4 @@
-from fastapi_profiler import PyInstrumentProfilerMiddleware
+# from fastapi_profiler import PyInstrumentProfilerMiddleware
 from fastapi.responses import FileResponse
 from pydantic import AnyHttpUrl
 # import fastapi_asyncapi
