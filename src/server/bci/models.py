@@ -157,10 +157,10 @@ class ClassificationStartResponse(BaseModel):
 class ClassificationResult(BaseModel):
     state: str = Field(...,
                        description="The classified state, e.g., 'Imagined Walking', 'Rest'")
-    timestamp: str = Field(...,
-                           description="ISO8601 timestamp of the classification result")
-    issued_at: str = Field(...,
-                           description="ISO8601 timestamp of when the classification result was issued")
+    timestamp: datetime = Field(...,
+                                description="ISO8601 timestamp of the classification result")
+    issued_at: datetime = Field(...,
+                                description="ISO8601 timestamp of when the classification result was issued")
 
 
 class ServersEnum(str, Enum):

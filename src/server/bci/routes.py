@@ -22,19 +22,24 @@ bci = APIRouter(prefix="/bci", tags=["bci"])
 
 MAIN_TRIAL_SET = CalibrationSet(
     name="Main Trial Set", repeat=100, actions=[
-        CalibrationAction(time=5, action="Start Imagining Walking", cooldown=3, baseline=2, label="feet"),
-        CalibrationAction(time=5, action="Stop and Rest", cooldown=3, baseline=2, label="rest"),
+        CalibrationAction(time=5, action="Start Imagining Walking",
+                          cooldown=3, baseline=2, label="feet"),
+        CalibrationAction(time=5, action="Stop and Rest",
+                          cooldown=3, baseline=2, label="rest"),
     ]
 )
 PLACEHOLDER_PROTOCOL = CalibrationProtocol(
     prepare=CalibrationSet(name="Prepare", repeat=1, actions=[
-        CalibrationAction(time=5, action="Prepare for Calibration", cooldown=3, baseline=2, label="prepare")
+        CalibrationAction(time=5, action="Prepare for Calibration",
+                          cooldown=3, baseline=2, label="prepare")
     ]),
     main_trial=MAIN_TRIAL_SET,
     end=CalibrationSet(name="End", repeat=1, actions=[
-        CalibrationAction(time=5, action="End Calibration", cooldown=3, baseline=2, label="end")
+        CalibrationAction(time=5, action="End Calibration",
+                          cooldown=3, baseline=2, label="end")
     ])
 )
+
 
 @bci.get("/session/obtain/")
 def obtain_session(auth_user=Depends(optional_token_header)):
@@ -42,6 +47,7 @@ def obtain_session(auth_user=Depends(optional_token_header)):
     # session_id = session_manager.obtain_session()
     session_id = "12345678-1234-5678-1234-567812345678"
     return {"session_id": session_id}
+
 
 @bci.get("/calibration/start/", response_model=CalibrationStartResponse)
 def start_calibration(session_id: Optional[str] = Query(None, description="The session ID of the calibration session"),
@@ -60,32 +66,47 @@ def start_calibration(session_id: Optional[str] = Query(None, description="The s
     return CalibrationStartResponse(message="Dummy calibration started", session_id="1234", protocol=protocol, start_time="2021-01-01T00:00:00Z")
 
 
-@bci.get("/classification/start/", response_model=ClassificationStartResponse)
-def start_classification(request: ClassificationStartRequest, auth_user=Depends(optional_token_header),
-                         session_id: str = Query(..., description="The session ID of the classification session")):
-    # Start the classification mode and return the response
-    try:
-        session = session_manager.get_session(request.session_id)
-        if not session:
-            raise HTTPException(status_code=404, detail="Session not found")
-        try:
-            session.init_classification(request)
-            return ClassificationStartResponse(message="Classification started",
-                                               session_id=request.session_id,
-                                               start_time=datetime.now(),
-                                               protocol=PLACEHOLDER_PROTOCOL,
-                                               server="localhost")
-        except Exception as e:
-            raise HTTPException(status_code=401, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @bci.get("/classification/start/", response_model=ClassificationStartResponse)
+# def start_classification(request: ClassificationStartRequest, auth_user=Depends(optional_token_header),
+#                          session_id: str = Query(..., description="The session ID of the classification session")):
+#     '''Checks if calibration mode is ready or not, if not then '''
+#     try:
+#         session = session_manager.get_session(request.session_id)
+#         if not session:
+#             raise HTTPException(status_code=404, detail="Session not found")
+#         try:
+#             session.init_classification(request)
+#             return ClassificationStartResponse(message="Classification started",
+#                                                session_id=request.session_id,
+#                                                start_time=datetime.now(),
+#                                                protocol=PLACEHOLDER_PROTOCOL,
+#                                                server="localhost")
+#         except Exception as e:
+#             raise HTTPException(status_code=401, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
 @bci.get("/classification/result/", response_model=ClassificationResult)
 def fetch_classification_result(session_id: str = Query(..., description="The session ID of the classification session"),
                                 auth_user=Depends(optional_token_header)):
-    # Fetch and return the latest classification result
-    return ClassificationResult(...)
+    '''Starts classification and returns the result. The classification result is a JSON object with the state and timestamp of the classification result.
+    The state is the classified state, e.g., 'Imagined Walking', 'Rest'. The timestamp is the ISO8601 timestamp of the classification result. The issued_at is the ISO8601 timestamp of when the classification result was issued.
+    Also note that errors will be returned in case of any issues with the classification process or signal acquisition.
+    '''
+    # session = session_manager.get_session(session_id)
+    # if not session:
+    # raise HTTPException(status_code=404, detail="Session not found")
+    # classification_result = session.get_classification_result()
+    # randomize state for now for testing
+    # if session.connection_status == ConnectionStatus.CONNECTED:
+    import random
+    output = random.choice(["feet", "rest", "bci_error"])
+    if output == "bci_error":
+        raise HTTPException(
+            status_code=400, detail="Error in BCI signal acquisition")
+    # return classification_result
+    return ClassificationResult(state=output, timestamp=datetime.now(), issued_at=datetime.now())
 
 
 # open websocket in parallel with classification to stream data and save it
@@ -99,10 +120,12 @@ async def bci_websocket(session_id: str, websocket: WebSocket):
     await bci_websocket_stream(websocket, session_id)
 
 
-@bci.get("/session/{location}/")
+@bci.get("/session/")
 def get_sessions(session_state: SessionState = Query(None, description="Filter sessions by state", alias="state"),
                  session_id: str = Query(
                      None, description="Filter sessions by ID", alias="id"),
+                 location: str = Query(
+                     None, description="Filter sessions by location, which server it is on", alias="location"),
                  ):
     '''Get a list of sessions based on the query parameters. If no parameters are provided, all sessions are returned.
     If a session ID is provided, only the session with that ID is returned. If a session state is provided, only sessions with that state are returned.'''
