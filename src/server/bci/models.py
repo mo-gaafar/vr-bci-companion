@@ -16,10 +16,16 @@ class ConnectionStatus(str, Enum):
 
 class CalibrationAction(BaseModel):
     """Protocol for the calibration session"""
+    baseline: Optional[bool] = Field(None,
+                                     description="How long the baseline is, before the action is performed.")
     time: int = Field(...,
                       description="Time in seconds when the instruction should be displayed")
+    cooldown: Optional[bool] = Field(None,
+                                     description="How long the cooldown is, after the action is performed.")
     action: str = Field(...,
                         description="The specific action or instruction for the user")
+    label: Optional[str] = Field(None,
+                                 description="The label of the action")
 
 
 class CalibrationSet(BaseModel):
@@ -136,7 +142,7 @@ class CalibrationStartResponse(BaseModel):
 
 
 class ClassificationStartRequest(BaseModel):
-    model_id: str = Field(...,
+    ml_model_id: str = Field(...,
                           description="The model ID to use for real-time classification")
     session_id: str = Field(...,
                             description="The session ID of the classification session")
@@ -196,13 +202,13 @@ class SessionInDB(BaseModel):
     protocol: Optional[CalibrationProtocol] = Field(
         None, description="The calibration protocol used in the session")
 
-    model_id: Optional[str] = Field(
-        None, description="The model ID used in the session")
-    model_repo: Optional[str] = Field(
+    ml_model_id: Optional[str] = Field(
+        None, description="The model ID used in the session", alias="model_id")
+    ml_model_repo: Optional[str] = Field(
         None, description="The model repository used in the session")
-    model_path: Optional[str] = Field(
+    ml_model_path: Optional[str] = Field(
         None, description="The model path used in the session")
-    model_version: Optional[str] = Field(
+    ml_model_version: Optional[str] = Field(
         None, description="The model version used in the session")
 
     classification_state: Optional[str] = Field(

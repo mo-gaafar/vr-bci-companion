@@ -31,6 +31,49 @@ from server.bci.models import CalibrationProtocol
 from .util import *
 
 
+# State Machine Design
+class SessionStateHandler:
+    """Handles the state machine logic for a BCI session."""
+
+    def __init__(self, session: 'BCISession'):
+        self.session = session
+        self.state = SessionState.UNSTARTED
+
+    def transition_to(self, new_state: SessionState):
+        """Handles state transitions and any associated actions."""
+        old_state = self.state
+        self.state = new_state
+
+        if new_state == SessionState.CALIBRATION and old_state == SessionState.UNSTARTED:
+            self.session.init_calibration(
+                self.session.calibration_protocol)  # Pass protocol here
+        elif new_state == SessionState.TRAINING and old_state == SessionState.CALIBRATION:
+            self.session.init_training()
+        elif new_state == SessionState.CLASSIFICATION and old_state == SessionState.TRAINING:
+            model_id = "placeholder" # Get model ID from somewhere
+            self.session.init_classification(model_id)
+        elif new_state == SessionState.UNSTARTED:
+            # Reset session state
+            # self.session.state = SessionState.UNSTARTED
+            self.session.connection_status = ConnectionStatus.DISCONNECTED
+            self.session.eeg_buffer.clear()
+            self.session.last_received_timestamp = 0
+            self.session.last_processed_timestamp = 0
+        else:
+            raise ValueError(
+                f"Invalid state transition from {old_state} to {new_state}")
+
+    def handle_data(self, data: EEGChunk):
+        """Delegates data handling to the appropriate method based on the current state."""
+        if self.state == SessionState.CALIBRATION:
+            self.session.handle_calibration_data(data)
+        elif self.state == SessionState.CLASSIFICATION:
+            self.session.handle_classification_data(data)
+        else: # Ignore data in other states
+            pass
+
+
+
 @dataclass
 class BCISession:
     """
@@ -43,7 +86,7 @@ class BCISession:
     session_id: uuid.UUID
 
     # Fields with default values
-    state: SessionState = SessionState.UNSTARTED
+    # state: SessionState = SessionState.UNSTARTED
     connection_status: ConnectionStatus = ConnectionStatus.DISCONNECTED
     eeg_buffer: deque = field(default_factory=lambda: deque(maxlen=1000))
     last_received_timestamp: float = 0
@@ -57,170 +100,65 @@ class BCISession:
         S3PickleStorage,
     ] = field(default_factory=LocalPickleStorage)
     chunk_size_threshold: int = 1000
+
     calibration_data: Optional[RawArray] = None
     calibration_protocol: Optional[CalibrationProtocol] = None
     calibration_events: Optional[List] = None
     calibration_duration: Optional[float] = None  # in seconds
     info: Optional[mne.Info] = None
     event_id: Optional[dict] = None
+
     # raw: Optional[RawArray] = None
+    state_handler: SessionStateHandler = field(init=False)
 
-    def update_state(self, new_state: Optional[SessionState] = None):
-        if new_state:
-            self.state = new_state
-        # if self.state == SessionState.CALIBRATION:
-        #     # enter once the calibration mode is started
-        #     if self.last_state != SessionState.CALIBRATION:
-        #         self.init_calibration()
-        elif self.state == SessionState.TRAINING:
-            # enter once the training mode is started
-            if self.last_state != SessionState.TRAINING:
-                self.init_training()
-
-        self.last_state = self.state
+    def __post_init__(self):
+        """Initialization after dataclass fields are set."""
+        self.state_handler = SessionStateHandler(self)
 
     def add_eeg_data(self, data: EEGChunk):
-        self.update_state()
-        if self.state == SessionState.CALIBRATION:
-            self.handle_calibration_data(data)
-        elif self.state == SessionState.CLASSIFICATION:
-            self.handle_classification_data(data)
+        """Entry point for new EEG data. Delegates to state handler."""
+        self.state_handler.handle_data(data)
 
     def init_calibration(self, protocol: CalibrationProtocol):
-        """Handle EEG data during calibration."""
-        if not self.info:
-            # Initialize MNE Info object if not already done
-            self.info = mne.create_info(
-                ch_names=self.channel_labels,
-                sfreq=self.calibration_data.sampling_rate,
-                ch_types=["eeg"] * len(self.channel_labels),
-            )
-            self.raw = mne.io.RawArray(
-                np.zeros((len(self.channel_labels), 0)), info=self.info, verbose=False
-            )
-        if protocol:
-            self.calibration_protocol = protocol
-            # calculate time from protocol
-            # self.protocol_time = calc_protocol_time(protocol)
-            first_epoch = 0  # ! TODO: get the first epoch number from the calibration data
-            self.calibration_events, self.event_id = generate_mne_event_labels(
-                protocol, first_epoch)
-
-        if self.raw:
-            new_data = np.array(self.calibration_data.data)
-            self.raw.append(
-                mne.io.RawArray(new_data, info=self.info, verbose=False)
-            )
-
-        if self.raw is not None and self.calibration_data is None and self.calibration_events is not None and self.event_id is not None:
-            self.calibration_data = mne.Epochs(
-                self.raw, events=self.calibration_events, event_id=self.event_id, tmin=-0.2, tmax=0.5
-            )
-        # store calibraiton data?
-
-        # get calibraiton duration based on protocol
-        self.calibration_duration = calc_protocol_time(
-            self.calibration_protocol)
-
-        self.set_state(SessionState.CALIBRATION)
+        """Initialize calibration process."""
+        # Setting up the raw and info and events 
+        
+        # Transition to calibration state
+        self.state_handler.transition_to(SessionState.CALIBRATION)
 
     def handle_calibration_data(self, data: EEGChunk):
-        # Convert to seconds
-        timestamps_sec = [ts / 1000 for ts in data.timestamps]
+        """Handles EEG data during calibration."""
+        # ... Your existing logic for appending data and checking for end of calibration ...
 
-        # Initialize RawArray if needed
-        if not self.info:
-            self.info = mne.create_info(
-                ch_names=data.channel_labels,  # Get channel labels from the chunk
-                sfreq=data.sampling_rate,
-                ch_types=["eeg"] * len(data.channel_labels),
-            )
-            self.raw = mne.io.RawArray(
-                np.zeros((len(data.channel_labels), 0)), info=self.info, verbose=False
-            )
-
-        # Append data, checking for repeated timestamps
-        last_timestamp = self.raw.times[-1] if self.raw and len(
-            self.raw.times) > 0 else -1
-        for i, (sample, timestamp) in enumerate(zip(data.data, timestamps_sec)):
-            if timestamp > last_timestamp:
-                self.raw.append(
-                    mne.io.RawArray(np.array(sample).reshape(
-                        1, -1), info=self.info, verbose=False),
-                    first_samp=len(self.raw.times),
-                )
-                last_timestamp = timestamp
-
-        # Check for calibration end based on duration
+        # If calibration is complete, transition to training
         if self.raw.times[-1] - self.raw.times[0] >= self.calibration_duration:
             self.end_calibration()
 
     def end_calibration(self):
+        # Create Epochs object from raw data and events
         self.calibration_data = mne.Epochs(
             self.raw, events=self.calibration_events, event_id=self.event_id, tmin=-0.2, tmax=0.5
         )
-
-        # Store calibration data using chosen repository
-        # Or use time-series repo if applicable
+        # Store calibration data
         self.storage_repo.store_data(self.calibration_data)
+        print("Calibration complete. Starting training..")
+        self.state_handler.transition_to(SessionState.TRAINING)
 
-        self.set_state(SessionState.TRAINING)
-
-        # Your classification logic here using self.raw...
 
     def init_training(self):
-        # Check model training status
-        is_training_complete = MachineLearningService.check_training_status(
-            self.session_id)
-        if is_training_complete:
-            self.set_state(SessionState.READY_FOR_CLASSIFICATION)
-
+        """Initialize model training."""
+        from server.machine_learning.service import ml_service
+        # Add calibration data to the training queue
+        # ml_service.
     def init_classification(self, model_id: str):
-        if not model_id:
-            raise Exception("Model ID required for classification.")
-        if self.state == SessionState.CLASSIFICATION and self.classification_model is not None:
-            # Already in classification mode so just return
-            return
-        elif self.state == SessionState.TRAINING:
-            # Wait for training to complete
-            raise Exception(
-                "Cannot start classification until training is complete.")
-        if self.state == SessionState.READY_FOR_CLASSIFICATION:
-            # Load the classification model
-            self.classification_model = MachineLearningService.load_model(
-                model_id)
-            self.set_state(SessionState.CLASSIFICATION)
+        """Initialize classification with the loaded model."""
+        # ... (Load your model) ...
+        self.state_handler.transition_to(SessionState.CLASSIFICATION)
 
-    def output_session_summary(self):
-        print(f"Session ID: {self.session_id}")
-        print(f"Session state: {self.state}")
-        # print(f"EEG data length: {len(self.eeg_data)}")
-        print(
-            f"Calibration data length: {len(self.calibration_data.data)} samples")
-        print(
-            f"Classification data length: {len(self.calibration_data.data)} samples")
+    def handle_classification_data(self, data: EEGChunk):
+        """Handles EEG data during classification, makes predictions, and processes results."""
+        # ... Your existing logic for appending data, extracting epochs, making predictions, etc. ...
 
-    def handle_classification(self, data: EEGChunk):
-        epoch_length = 100  # Adjust for your sampling rate and desired epoch length
-        epoch_overlap = 50  # 50% overlap
-        # Append new data to the buffer
-        self.classification_buffer.extend(data.data)
-
-        # While the buffer has enough data for a prediction...
-        while len(self.classification_buffer) >= epoch_length:
-            # Extract the current epoch
-            epoch_data = self.classification_buffer[:epoch_length]
-
-            # Make a prediction
-            prediction = self.classification_model.predict(epoch_data)
-
-            # Remove old data (adjust for overlap)
-            self.classification_buffer = self.classification_buffer[epoch_overlap:]
-
-            # ... Handle the prediction result ...
-            pass
-
-    def set_state(self, new_state: SessionState):
         """Set the session state."""
         self.state = new_state
 
@@ -233,7 +171,7 @@ class BCISession:
             eeg_buffer_len = len(self.eeg_buffer) if self.eeg_buffer else 0
             dict_out = {
                 "session_id": self.session_id,
-                "state": str(self.state),
+                "state": str(self.state_handler.state),
                 "channels": dict(self.info.ch_names if self.info else None),
                 "calibration_data": calibration_data_len,
                 "classification_data": classification_data_len,
@@ -247,11 +185,12 @@ class BCISession:
     def __dict__(self):
         return {
             "session_id": self.session_id,
-            "state": str(self.state),
+            "state": str(self.state_handler.state),
             "channels": dict(self.info.ch_names if self.info else None),
         }
 
-from .repo import ISessionRepository, session_repo
+# from .repo import ISessionRepository, session_repo
+
 
 class SessionManager:
     def __init__(self):

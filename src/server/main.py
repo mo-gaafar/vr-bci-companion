@@ -1,3 +1,4 @@
+from fastapi_profiler import PyInstrumentProfilerMiddleware
 from fastapi.responses import FileResponse
 from pydantic import AnyHttpUrl
 # import fastapi_asyncapi
@@ -51,6 +52,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+
+# PERFORMANCE PROFILER MIDDLEWARE
+
+# app.add_middleware(
+#     PyInstrumentProfilerMiddleware,
+#     server_app=app,
+#     profiler_output_type="speedscope",
+#     prof_file_name="example_speedscope_profile.json"
+# )
+# app.add_middleware(
+#     PyInstrumentProfilerMiddleware,
+#     server_app=app,  # Required to output the profile on server shutdown
+#     profiler_output_type="html",
+#     is_print_each_request=False,  # Set to True to show request profile on
+#                                   # stdout on each request
+#     open_in_browser=True,  # Set to true to open your web-browser automatically
+#     # when the server shuts down
+#     html_file_name="example_profile.html"  # Filename for output
+# )
+
+
 STATIC_DIR = "/server/static"
 if STATIC_DIR and path.isdir('.'+STATIC_DIR):
     app.mount("/server/static",

@@ -13,7 +13,7 @@ class ModelTrainingRequest(BaseModel):
 
 class ModelTrainingResponse(BaseModel):
     message: str
-    model_id: str = Field(...,
+    ml_model_id: str = Field(...,
                           description="A unique identifier for the trained model")
 
 

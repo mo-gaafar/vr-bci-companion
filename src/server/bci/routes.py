@@ -1,3 +1,4 @@
+from server.auth.service import verify_token_header, optional_token_header
 from typing import Optional
 from datetime import datetime
 from fastapi import Query
@@ -35,16 +36,23 @@ PLACEHOLDER_PROTOCOL = CalibrationProtocol(
     ])
 )
 
+@bci.get("/session/obtain/")
+def obtain_session(auth_user=Depends(optional_token_header)):
+    # Obtain a new session ID or the existing session ID for the user
+    # session_id = session_manager.obtain_session()
+    session_id = "12345678-1234-5678-1234-567812345678"
+    return {"session_id": session_id}
 
-@bci.get("/calibration/start/{session_id}", response_model=CalibrationStartResponse)
-def start_calibration(session_id: Optional[str] = Path(None, description="The session ID of the calibration session")):
+@bci.get("/calibration/start/", response_model=CalibrationStartResponse)
+def start_calibration(session_id: Optional[str] = Query(None, description="The session ID of the calibration session"),
+                      auth_user=Depends(optional_token_header)):
     # Implementation to initiate a calibration session
     # check if session exists
     # session = session_manager.get_session(session_id)
     # if not session:
     #     raise HTTPException(status_code=404, detail="Session not found")
-    
-    #Placeholder Calibration protocol
+
+    # Placeholder Calibration protocol
     protocol = PLACEHOLDER_PROTOCOL
     # Start the calibration session and return the response
     # session.init_calibration(protocol)
@@ -52,8 +60,9 @@ def start_calibration(session_id: Optional[str] = Path(None, description="The se
     return CalibrationStartResponse(message="Dummy calibration started", session_id="1234", protocol=protocol, start_time="2021-01-01T00:00:00Z")
 
 
-@bci.get("/classification/start/{session_id}", response_model=ClassificationStartResponse)
-def start_classification(request: ClassificationStartRequest):
+@bci.get("/classification/start/", response_model=ClassificationStartResponse)
+def start_classification(request: ClassificationStartRequest, auth_user=Depends(optional_token_header),
+                         session_id: str = Query(..., description="The session ID of the classification session")):
     # Start the classification mode and return the response
     try:
         session = session_manager.get_session(request.session_id)
@@ -72,8 +81,9 @@ def start_classification(request: ClassificationStartRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@bci.get("/classification/result/{session_id}", response_model=ClassificationResult)
-def fetch_classification_result(session_id: str = Path(..., description="The session ID of the classification session")):
+@bci.get("/classification/result/", response_model=ClassificationResult)
+def fetch_classification_result(session_id: str = Query(..., description="The session ID of the classification session"),
+                                auth_user=Depends(optional_token_header)):
     # Fetch and return the latest classification result
     return ClassificationResult(...)
 
@@ -100,14 +110,14 @@ def get_sessions(session_state: SessionState = Query(None, description="Filter s
     if session_id and session_state:
         raise HTTPException(
             status_code=400, detail="Cannot filter by both session ID and state")
-    
+
     if session_id:
         session = session_manager.get_session(session_id)
         if session:
             return session.__dict__()
         else:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
     if not session_state:
         for session in session_manager.sessions:
             sessions.append(session.__dict__())
