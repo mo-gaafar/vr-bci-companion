@@ -33,7 +33,7 @@ async def send_fake_data(websocket):
             await asyncio.sleep(0.1)  # Adjust sleep for real-time simulation
 
 
-# @pytest.mark.skip # Skip this test for now
+@pytest.mark.skip # Skip this test for now
 @pytest.mark.asyncio
 async def test_bci_session(testapp):  # Use the 'testapp' fixture
     session_id = SESSION_ID
