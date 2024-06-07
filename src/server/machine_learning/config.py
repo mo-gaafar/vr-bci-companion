@@ -6,7 +6,7 @@ from .models import StorageType
 
 class MLConfig(BaseSettings):
     MODEL_STORAGE: StorageType = Field(
-        StorageType.local,
+        StorageType.s3,
         title="Model Storage Type",
         description="Default storage type for models",
     )

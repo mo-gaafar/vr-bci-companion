@@ -30,11 +30,23 @@ def calc_protocol_time(calibration_protocol: CalibrationProtocol):
     # add up all seconds x repetitions
     time = 0
     for event in calibration_protocol.prepare.actions:
-        time += event.time
+        time_prep = 0
+        time_prep += event.baseline
+        time_prep += event.time
+        time_prep += event.cooldown
+        time += time_prep * calibration_protocol.prepare.repeat
     for event in calibration_protocol.main_trial.actions:
-        time += event.time * calibration_protocol.main_trial.repeat
+        time_trial = 0
+        time_trial += event.baseline
+        time_trial += event.time
+        time_trial += event.cooldown
+        time += time_trial * calibration_protocol.main_trial.repeat
     for event in calibration_protocol.end.actions:
-        time += event.time
+        time_end = 0
+        time_end += event.baseline
+        time_end += event.time
+        time_end += event.cooldown
+        time += time_end * calibration_protocol.end.repeat
     return time
 
 def generate_mne_event_labels(protocol: CalibrationProtocol, start_epoch):

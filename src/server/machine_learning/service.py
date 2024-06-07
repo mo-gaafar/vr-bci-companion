@@ -7,6 +7,8 @@ from server.config import CONFIG
 from typing import Dict, Optional
 from typing import Tuple
 
+from latss import LATSS
+
 
 class MachineLearningService:
     def __init__(self):
@@ -17,22 +19,33 @@ class MachineLearningService:
             S3MLRepo() if CONFIG.ML_CONFIG.MODEL_STORAGE == StorageType.s3 else LocalMLRepo()
         )
 
-    async def train_model(self, session_id: str, calibration_data: object):
+    def train_model(self, session_id: str, calibration_data: object = None, calib_path: str = None):
         """
         Train the model with the calibration data and source data.
-        
+
         This function is designed to be run as a background task.
         """
         self.models[session_id] = (
             None, TrainingStatus.PENDING)  # Initial status: PENDING
+        # Add the model to the models dictionary with status PENDING
         try:
-            untrained_model = self.repo.load_untrained_model()
-            source_data = self.repo._load_from_storage("source_data.pkl")
+            # untrained_model = self.repo.load_untrained_model()
+            if calib_path:
+                # Load the calibration data from the repo
+                self.repo._load_from_storage(calib_path)
+            elif calibration_data is None:
+                calibration_data = self.repo._load_from_storage(
+                    "calibration_raw"+session_id+".pkl")
+
+            source_data = self.repo._load_from_storage("source_np.pkl")
             # Update status: IN_PROGRESS
             self.models[session_id] = (
+                None, TrainingStatus.IN_PROGRESS)
+            untrained_model = LATSS(source_data)
+            self.models[session_id] = (
                 untrained_model, TrainingStatus.IN_PROGRESS)
-            trained_model = untrained_model.fit(
-                source_data, calibration_data)  # Train the model
+            # Train the model
+            trained_model = untrained_model.calibrate(calibration_data)
             # Update status: COMPLETED
             self.models[session_id] = (trained_model, TrainingStatus.COMPLETED)
             self.repo.store_model(trained_model, session_id)
@@ -53,9 +66,16 @@ class MachineLearningService:
         if status == TrainingStatus.COMPLETED:
             return model
         else:
-            print(
-                f"Cannot load model for session {session_id}: Status is {status}")
-            return None  # Or raise an exception, depending on your error handling strategy
+            # try loading from storage
+            print(f"Loading model from storage for session {session_id}")
+            model = self.repo.load_model(session_id)
+            if model:
+                self.models[session_id] = (model, TrainingStatus.COMPLETED)
+                return model
+            else:
+                print(
+                    f"Cannot load model for session {session_id}: Status is {status}")
+                return None  # Or raise an exception, depending on your error handling strategy
 
     def classify(self, session_id: str, data: object):
         """Classify the data using the trained model for the given session."""
@@ -64,18 +84,37 @@ class MachineLearningService:
             raise ValueError(
                 f"Model not loaded or training not completed for session {session_id}"
             )
-        return model.predict(data)
+        # Make predictions using the model
+        predictions = model.predict(data)
+        # Take last prediction if array
+        if isinstance(predictions, list):
+            predictions = predictions[-1]
+        return predictions
 
-    async def add_to_queue(self, session_id: str, calibration_data: object):
+    def add_to_queue(self, session_id: str, calibration_data: object = None, calib_path: str = None):
         """
         Add a model training task to the queue.
         """
+        # Checking if the calibration data is available and loading it
+        if calib_path:
+            # Load calibration data from the repo
+            calibration_data = self.repo._load_from_storage(calib_path)
+        elif calibration_data is None:
+            calibration_data = self.repo._load_from_storage(
+                "calibration_raw"+session_id+".pkl")
+        elif calibration_data:
+            # Add the task to the queue
+            pass
+        else:
+            # Raise an exception if the calibration data is missing
+            raise ValueError("Calibration data is required")
+
+        # Add the task to the queue
         self.model_queue.append((session_id, calibration_data))
 
-        # Process the queue in the background
+        # TODO: make this a background async task in a real-world application
         while self.model_queue:
-            session_id, data = self.model_queue.pop(0)
-            await self.train_model(session_id, data)
-
+            session_id, calibration_data = self.model_queue.pop(0)
+            self.train_model(session_id, calibration_data)
 
 ml_service = MachineLearningService()

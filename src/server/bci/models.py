@@ -53,6 +53,7 @@ class SessionState(str, Enum):
     READY_FOR_CLASSIFICATION = "Ready for Classification"
     CLASSIFICATION = "Classification"
     CLOSED = "Closed"
+    ERROR = "Error"
 
 
 class LSLPacket(BaseModel):

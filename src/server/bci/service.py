@@ -1,3 +1,6 @@
+from server.machine_learning.models import TrainingStatus
+import time
+from server.machine_learning.service import ml_service
 import uuid
 import pickle
 from collections import deque
@@ -48,10 +51,14 @@ class SessionStateHandler:
             self.session.init_calibration(
                 self.session.calibration_protocol)  # Pass protocol here
         elif new_state == SessionState.TRAINING and old_state == SessionState.CALIBRATION:
+            self.session.end_calibration()
             self.session.init_training()
-        elif new_state == SessionState.CLASSIFICATION and old_state == SessionState.TRAINING:
-            model_id = "placeholder" # Get model ID from somewhere
+        elif new_state == SessionState.READY_FOR_CLASSIFICATION and old_state == SessionState.TRAINING:
+            model_id = "placeholder"  # Get model ID from somewhere
             self.session.init_classification(model_id)
+        elif new_state == SessionState.CLASSIFICATION and old_state == SessionState.READY_FOR_CLASSIFICATION:
+            # Start classification (allow this transition)
+            pass
         elif new_state == SessionState.UNSTARTED:
             # Reset session state
             # self.session.state = SessionState.UNSTARTED
@@ -69,9 +76,8 @@ class SessionStateHandler:
             self.session.handle_calibration_data(data)
         elif self.state == SessionState.CLASSIFICATION:
             self.session.handle_classification_data(data)
-        else: # Ignore data in other states
+        else:  # Ignore data in other states
             pass
-
 
 
 @dataclass
@@ -91,8 +97,10 @@ class BCISession:
     eeg_buffer: deque = field(default_factory=lambda: deque(maxlen=1000))
     last_received_timestamp: float = 0
     last_processed_timestamp: float = 0
-    classification_model: Optional[object] = None
+    
     classification_buffer: List = field(default_factory=list)
+    prediction_buffer: List = field(default_factory=list)
+
     storage_repo: Union[
         # InfluxDBTimeSeriesRepository,
         # MongoDbTimeSeriesRepository,
@@ -101,7 +109,8 @@ class BCISession:
     ] = field(default_factory=LocalPickleStorage)
     chunk_size_threshold: int = 1000
 
-    calibration_data: Optional[RawArray] = None
+
+    calibration_raw: Optional[RawArray] = None
     calibration_protocol: Optional[CalibrationProtocol] = None
     calibration_events: Optional[List] = None
     calibration_duration: Optional[float] = None  # in seconds
@@ -121,46 +130,60 @@ class BCISession:
 
     def init_calibration(self, protocol: CalibrationProtocol):
         """Initialize calibration process."""
-        # Setting up the raw and info and events 
-        
-        # Transition to calibration state
-        self.state_handler.transition_to(SessionState.CALIBRATION)
+        # Setting up the raw and info and events
+        try:
+            # Transition to calibration state
+            self.state_handler.transition_to(SessionState.CALIBRATION)
+            return True
+        except Exception as e:
+            print(f"Error initializing calibration: {e}")
+            return None
 
     def handle_calibration_data(self, data: EEGChunk):
         """Handles EEG data during calibration."""
-        # ... Your existing logic for appending data and checking for end of calibration ...
-
-        # If calibration is complete, transition to training
-        if self.raw.times[-1] - self.raw.times[0] >= self.calibration_duration:
-            self.end_calibration()
+        # Append data to the calibration buffer
+        # self.eeg_buffer.append(data)
+        # Append data to the calibration raw object
+        # flatten the eeg chunk and append to calibration mne.io raw object
+        # Check if we have enough data to end calibration  (based on calibration protocol total length)
+        from .util import calc_protocol_time
+        if self.calibration_raw >= calc_protocol_time(self.calibration_protocol):
+            self.state_handler.transition_to(SessionState.TRAINING)
+            print("Calibration complete. Starting training..")
+        else:
+            data = np.array(data.data).flatten()
+            self.calibration_raw.append(data)
+            print(f"Calibration data length: {len(self.calibration_raw)}")
 
     def end_calibration(self):
-        # Create Epochs object from raw data and events
-        self.calibration_data = mne.Epochs(
-            self.raw, events=self.calibration_events, event_id=self.event_id, tmin=-0.2, tmax=0.5
-        )
+        """End the calibration process."""
         # Store calibration data
-        self.storage_repo.store_data(self.calibration_data)
+        self.storage_repo.save(self.calibration_raw,
+                               "calibration_raw"+str(self.session_id))
+
         print("Calibration complete. Starting training..")
         self.state_handler.transition_to(SessionState.TRAINING)
 
-
     def init_training(self):
         """Initialize model training."""
-        from server.machine_learning.service import ml_service
-        # Add calibration data to the training queue
-        # ml_service.
+        # Feed calibration data to the ML service and start training
+        ml_service.add_to_queue(self.calibration_raw)
+
     def init_classification(self, model_id: str):
         """Initialize classification with the loaded model."""
-        # ... (Load your model) ...
-        self.state_handler.transition_to(SessionState.CLASSIFICATION)
+        self.classification_model = ml_service.load_model(model_id)
 
     def handle_classification_data(self, data: EEGChunk):
         """Handles EEG data during classification, makes predictions, and processes results."""
-        # ... Your existing logic for appending data, extracting epochs, making predictions, etc. ...
+        # Append data to the classification buffer
+        self.classification_buffer.append(data)
 
-        """Set the session state."""
-        self.state = new_state
+    def get_classification_results(self):
+        """Get the latest classification results."""
+        pred = ml_service.classify(self.session_id, self.classification_buffer)
+        # Add to prediction buffer
+        self.prediction_buffer.append((time.time(), pred))
+        return pred
 
     def get_session_stats(self):
         try:

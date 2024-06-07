@@ -62,7 +62,7 @@ class S3Repo:
                 self.config.AWS_S3_BUCKET, key, str(cached_path)
             )
             shutil.copy2(cached_path, file_path)  # Copy with metadata
-        except boto3.exceptions.S3DownloadFailedError as e:
+        except Exception as e:
             raise HTTPException(
                 status_code=404, detail=f"File not found in R2: {e}")
 

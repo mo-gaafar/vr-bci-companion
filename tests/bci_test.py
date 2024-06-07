@@ -30,10 +30,11 @@ async def send_fake_data(websocket):
                 "data": packet.data
             }
             websocket.send_json(payload)
+            print(f"Sent: {payload}")
             await asyncio.sleep(0.1)  # Adjust sleep for real-time simulation
 
 
-@pytest.mark.skip # Skip this test for now
+# @pytest.mark.skip # Skip this test for now
 @pytest.mark.asyncio
 async def test_bci_session(testapp):  # Use the 'testapp' fixture
     session_id = SESSION_ID
@@ -53,9 +54,9 @@ async def test_bci_session(testapp):  # Use the 'testapp' fixture
         # Create an asyncio task to send data asynchronously
         send_task = asyncio.create_task(send_fake_data(websocket))
         # wait for some data to be sent
-        await asyncio.sleep(1)
+        await asyncio.sleep(5)
         # Check if the session is created while data is being sent
-        response = testapp.get("api/v1/bci/sessions")
+        response = testapp.get("api/v1/bci/session/"+"?session_id="+session_id)
         assert response.status_code == 200
 
         # Check if session exists in the response
